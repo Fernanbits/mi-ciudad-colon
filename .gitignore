@@ -10,3 +10,4 @@ ios/
 !.env.example
 coverage/
 build/
+BITACORA.md
