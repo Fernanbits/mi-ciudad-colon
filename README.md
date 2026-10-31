@@ -1,8 +1,24 @@
 # Mi Ciudad Colón
 
-Aplicación móvil turística construida con React Native, Expo SDK 58, TypeScript y Expo Router. El alcance está definido exclusivamente por el PDR `Mi Ciudad - Guía turística de Colón`.
+Aplicación móvil turística para descubrir Colón, Entre Ríos. El proyecto está planteado como un MVP académico: busca resolver el recorrido principal del PDR con una base clara, mantenible y fácil de continuar.
 
-## Ejecutar
+La app permite explorar lugares, consultar eventos, armar un recorrido personal, registrar visitas y guardar recuerdos. También contempla ubicación, códigos QR, favoritos, audioguías y funcionamiento con datos locales cuando la conexión no está disponible.
+
+## Documentación
+
+- [Documentación funcional y técnica](DOCUMENTACION_PROYECTO.md)
+- [Auditoría del estado actual](AUDITORIA_APP.md)
+
+## Ejecutar el proyecto
+
+Requisitos mínimos:
+
+- Node.js LTS.
+- npm.
+- Android Studio y Android SDK para usar un emulador o un dispositivo Android.
+- Expo Go compatible con SDK 58 para la prueba rápida en un teléfono.
+
+Desde la carpeta del proyecto:
 
 ```powershell
 npm.cmd install
@@ -10,46 +26,52 @@ npm.cmd run typecheck
 npm.cmd start -- --clear
 ```
 
-Se puede probar con Expo Go usando el QR, siempre que el teléfono y la computadora estén en la misma red Wi-Fi.
+El servidor muestra un código QR. Para abrirlo con Expo Go, el teléfono y la computadora deben estar conectados a la misma red Wi-Fi. Si la red bloquea la conexión local, se puede probar con un emulador Android o con el modo de túnel de Expo.
 
-## Arquitectura
+## Estructura principal
 
-- `src/app`: rutas y pantallas.
-- `src/tipos`: modelos del PDR.
-- `src/mocks`: datos de desarrollo.
-- `src/servicios`: capa asíncrona de datos y capacidades del dispositivo.
-- `src/almacenamiento`: SQLite, caché y preferencias.
-- `src/contexto`: estado global de sesión, favoritos, visitas y conectividad.
-- `src/components`: componentes visuales reutilizables.
-- `BITACORA.md`: proceso completo y guía para la defensa.
+```text
+src/
+├── app/              # pantallas y rutas de Expo Router
+├── components/       # componentes visuales reutilizables
+├── contexto/         # estado compartido de la aplicación
+├── almacenamiento/   # SQLite, caché y preferencias
+├── mocks/            # datos de respaldo para desarrollo
+├── servicios/        # API, ubicación, notificaciones, archivos y sesión
+├── theme/            # colores y decisiones visuales de marca
+└── tipos/            # modelos TypeScript del dominio
+```
 
 ## Datos y API
 
-La aplicación trabaja con dos niveles de datos. Cuando existe `EXPO_PUBLIC_API_URL` en un archivo `.env`, los servicios consultan la API de Mi Ciudad para lugares, categorías, eventos, autenticación y visitas. El catálogo se guarda en caché local y las visitas se encolan en SQLite para reintentarlas cuando vuelve la conexión.
+Cuando existe `EXPO_PUBLIC_API_URL` en un archivo `.env`, la app consulta la API de Mi Ciudad para lugares, categorías, eventos, autenticación y visitas. El catálogo se guarda en caché local y las visitas pendientes se conservan en SQLite para intentar sincronizarlas más adelante.
 
-Si no se configura la URL de la API o el servidor no responde, la app utiliza el catálogo local de respaldo. Esto permite probar la experiencia turística sin bloquearse por una caída de red.
+Si no se configura la API o el servidor no responde, se utiliza el catálogo local de respaldo. Esta decisión permite presentar el recorrido principal sin que una caída de red deje la app completamente vacía.
 
-Para activar la API localmente:
+Para activar la API de forma local:
 
 ```powershell
 Copy-Item .env.example .env
-# Editar .env y reemplazar la IP por la de la computadora que ejecuta la API.
+# Editar .env y colocar la dirección de la computadora que ejecuta la API.
 ```
 
-El teléfono y la computadora deben estar en la misma red Wi-Fi. La API de referencia y sus instrucciones de arranque están en el repositorio de la cátedra: <https://github.com/franco-ruisdias-uner/api-proyectos-mobile/tree/main/api-mi-ciudad>.
+La API de referencia y sus instrucciones están en el repositorio de la cátedra: [api-proyectos-mobile](https://github.com/franco-ruisdias-uner/api-proyectos-mobile/tree/main/api-mi-ciudad).
 
-No se conecta por defecto a la API de comercios de otra ciudad: ese contrato no cubre la agenda, las audioguías ni las visitas que exige este PDR.
+## Seguridad básica
 
-## Seguridad
+- Los tokens de sesión se guardan mediante `expo-secure-store`.
+- `.env` está excluido de Git y solo `.env.example` se comparte como plantilla.
+- Las variables `EXPO_PUBLIC_` no deben contener contraseñas, claves privadas ni secretos.
+- La app solicita permisos con textos explicativos y solo cuando la función los necesita.
 
-Los tokens se guardan en `expo-secure-store`. No se incluyen secretos en variables `EXPO_PUBLIC_`. Un futuro `.env` móvil puede contener únicamente una URL pública de API, nunca contraseñas, claves privadas, secretos JWT o credenciales de base de datos.
-
-## Verificaciones
+## Comandos útiles
 
 ```powershell
 npm.cmd run typecheck
+npm.cmd start -- --clear
+npm.cmd run android
 npx expo-doctor
 npx expo export --platform android
 ```
 
-Para una entrega instalable se utilizará el perfil `preview` de `eas.json` después de completar la prueba funcional en Android y iPhone.
+El proyecto todavía se considera una entrega académica. Antes de una publicación real habría que completar pruebas automatizadas, una revisión de accesibilidad, la carga de fotografías al servidor, la configuración de notificaciones remotas y una estrategia de despliegue.
