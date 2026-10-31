@@ -1,0 +1,85 @@
+{
+  "expo": {
+    "name": "Mi Ciudad",
+    "slug": "mi-ciudad-colon",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "scheme": "miciudad",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon-mi-ciudad.png",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon-mi-ciudad.png",
+          "backgroundColor": "#FAF7F1",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mi Ciudad necesita la cámara para registrar visitas y leer códigos QR."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mi Ciudad usa tu ubicación para mostrar lugares cercanos y ayudarte a orientarte."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mi Ciudad necesita acceder a tus fotos para asociarlas a una visita."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Mi Ciudad usa la biometría para facilitar el reingreso."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon-mi-ciudad.png",
+          "color": "#0E5A74"
+        }
+      ],
+      "expo-audio",
+      "expo-secure-store",
+      "expo-sqlite",
+      "@react-native-vector-icons/ionicons",
+      "expo-asset",
+      "expo-video",
+      "expo-font"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.miciudad.colon",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Mi Ciudad usa tu ubicación para mostrar lugares cercanos.",
+        "NSCameraUsageDescription": "Mi Ciudad necesita la cámara para leer códigos QR.",
+        "NSPhotoLibraryUsageDescription": "Mi Ciudad necesita acceder a tus fotos para guardar recuerdos de visitas."
+      }
+    },
+    "android": {
+      "package": "com.miciudad.colon",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "POST_NOTIFICATIONS"
+      ]
+    }
+  }
+}

@@ -1,0 +1,69 @@
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import { usuarioDemo } from '../mocks/datos';
+import { Usuario } from '../tipos/modelos';
+import { apiConfigurada, pedirApi, RespuestaUnoApi, SesionApi } from './api';
+
+const CLAVE_TOKEN = 'mi-ciudad.session.token';
+const CLAVE_USUARIO = 'mi-ciudad.session.user';
+
+async function guardarSesion(usuario: Usuario, token: string): Promise<void> {
+  await SecureStore.setItemAsync(CLAVE_TOKEN, token);
+  await SecureStore.setItemAsync(CLAVE_USUARIO, JSON.stringify(usuario));
+}
+
+export async function iniciarSesion(email: string, password: string): Promise<Usuario> {
+  if (!email.trim() || !email.includes('@')) throw new Error('Ingresá un email válido.');
+  if (!password.trim()) throw new Error('Ingresá tu contraseña.');
+  if (apiConfigurada()) {
+    const respuesta = await pedirApi<RespuestaUnoApi<SesionApi>>('/auth/ingreso', {
+      method: 'POST',
+      body: { email: email.trim(), contrasena: password },
+    });
+    await guardarSesion(respuesta.datos.usuario, respuesta.datos.token);
+    return respuesta.datos.usuario;
+  }
+  if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
+  const usuario = { ...usuarioDemo, email: email.trim() };
+  await guardarSesion(usuario, `local-session-${usuario.id}`);
+  return usuario;
+}
+
+export async function registrarUsuario(nombre: string, email: string, password: string): Promise<Usuario> {
+  if (!nombre.trim()) throw new Error('Ingresá tu nombre.');
+  if (apiConfigurada()) {
+    const respuesta = await pedirApi<RespuestaUnoApi<SesionApi>>('/auth/registro', {
+      method: 'POST',
+      body: { nombre: nombre.trim(), email: email.trim(), contrasena: password },
+    });
+    await guardarSesion(respuesta.datos.usuario, respuesta.datos.token);
+    return respuesta.datos.usuario;
+  }
+  const usuario = { ...await iniciarSesion(email, password), nombre: nombre.trim() };
+  await guardarSesion(usuario, `local-session-${usuario.id}`);
+  return usuario;
+}
+
+export async function obtenerTokenSesion(): Promise<string | null> {
+  return SecureStore.getItemAsync(CLAVE_TOKEN);
+}
+
+export async function recuperarSesion(): Promise<Usuario | null> {
+  const token = await SecureStore.getItemAsync(CLAVE_TOKEN);
+  const usuario = await SecureStore.getItemAsync(CLAVE_USUARIO);
+  if (!token || !usuario) return null;
+  return JSON.parse(usuario) as Usuario;
+}
+
+export async function cerrarSesion(): Promise<void> {
+  await SecureStore.deleteItemAsync(CLAVE_TOKEN);
+  await SecureStore.deleteItemAsync(CLAVE_USUARIO);
+}
+
+export async function autenticarConBiometria(): Promise<boolean> {
+  const disponible = await LocalAuthentication.hasHardwareAsync();
+  const inscripta = await LocalAuthentication.isEnrolledAsync();
+  if (!disponible || !inscripta) return false;
+  const resultado = await LocalAuthentication.authenticateAsync({ promptMessage: 'Ingresá a Mi Ciudad' });
+  return resultado.success;
+}
