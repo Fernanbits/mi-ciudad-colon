@@ -1,8 +1,21 @@
 # Mi Ciudad Colón
 
+<p align="center">
+  <img src="assets/icon-mi-ciudad.png" alt="Ícono de Mi Ciudad Colón" width="140">
+</p>
+
 Aplicación móvil turística para descubrir Colón, Entre Ríos. El proyecto está planteado como un MVP académico: busca resolver el recorrido principal del PDR con una base clara, mantenible y fácil de continuar.
 
 La app permite explorar lugares, consultar eventos, armar un recorrido personal, registrar visitas y guardar recuerdos. También contempla ubicación, códigos QR, favoritos, audioguías y funcionamiento con datos locales cuando la conexión no está disponible.
+
+**Equipo:** Grupo 75
+
+**Institución:** Universidad Nacional de Entre Ríos — FCAD
+
+- Gustavo Minchiotti
+- Francisco López
+- Alicia Montenegro
+- Jimena Fernández
 
 ## Documentación
 

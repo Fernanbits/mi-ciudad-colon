@@ -1,9 +1,22 @@
 # Documentación del proyecto — Mi Ciudad Colón
 
+<p align="center">
+  <img src="assets/icon-mi-ciudad.png" alt="Ícono de Mi Ciudad Colón" width="160">
+</p>
+
 **Versión:** 1.0.0  
 **Tipo:** MVP académico para dispositivos móviles  
 **Ciudad:** Colón, Entre Ríos, Argentina  
 **Tecnología principal:** React Native con Expo y TypeScript
+
+**Institución:** Universidad Nacional de Entre Ríos — FCAD
+
+## Equipo — Grupo 75
+
+- Gustavo Minchiotti
+- Francisco López
+- Alicia Montenegro
+- Jimena Fernández
 
 ## 1. Presentación
 
