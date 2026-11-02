@@ -14,6 +14,7 @@ export default function LugarDetailScreen() {
   const [lugar, setLugar] = useState<Lugar | null>(null);
   const [categoria, setCategoria] = useState<Categoria | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imagenFallida, setImagenFallida] = useState(false);
   const { favoritos, toggleFavorito } = useAplicacion();
 
   useEffect(() => { void Promise.all([obtenerLugar(id), listarCategorias()]).then(([encontrado, categorias]) => { setLugar(encontrado); setCategoria(categorias.find((item) => item.id === encontrado?.categoriaId) ?? null); }).finally(() => setLoading(false)); }, [id]);
@@ -27,7 +28,7 @@ export default function LugarDetailScreen() {
 
   return <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
     <View style={styles.top}><Pressable onPress={() => router.back()}><Text style={styles.back}>‹ Volver</Text></Pressable><Pressable onPress={() => void toggleFavorito(lugar.id)} accessibilityLabel={favorito ? 'Quitar de favoritos' : 'Agregar a favoritos'}><Text style={styles.favorite}>{favorito ? '♥' : '♡'}</Text></Pressable></View>
-    <Image source={imagenDeLugar(lugar.imagenes[0])} style={styles.hero} />
+    <Image source={imagenFallida ? imagenDeLugar() : imagenDeLugar(lugar.imagenes[0])} style={styles.hero} onError={() => setImagenFallida(true)} />
     <Text style={[styles.category, { color: categoria?.color ?? '#6C8C4A' }]}>{(categoria?.nombre ?? 'LUGAR').toUpperCase()}</Text>
     <Text style={styles.title}>{lugar.nombre}</Text>
     <Text style={styles.status}>{lugar.horarios.length ? 'Horario disponible para consultar' : 'Horario a confirmar'} · {acceso}</Text>

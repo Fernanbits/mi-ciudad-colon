@@ -30,7 +30,7 @@ const horariosCentro = [
  */
 const imagenesReales = {
   molinoForclaz: ['https://www.argentina.gob.ar/sites/default/files/molinoforclazcnm.jpg'],
-  termasColon: ['https://termascolon.gov.ar/wp-content/uploads/2018/06/DSC_0219.jpg'],
+  termasColon: ['https://www.turismoentrerios.com/colon/img/termas-colon/18.jpg'],
   playaNorte: ['https://colon.gov.ar/wp-content/uploads/2026/01/WhatsApp-Image-2026-01-06-at-08.12.15.jpeg'],
   parqueElPalmar: ['https://www.argentina.gob.ar/sites/default/files/pn_el_palmar_ecosistema_ph_parquesnacionales.jpg'],
   feriaArtesanos: [

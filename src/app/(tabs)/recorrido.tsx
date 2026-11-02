@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { categorias } from '../../mocks/datos';
+import { imagenDeLugar } from '../../components/LugarCard';
 import { guardarFotoVisita } from '../../servicios/archivos';
 import { distanciaEnMetros } from '../../servicios/distancias';
 import { listarLugares } from '../../servicios/lugares';
@@ -16,6 +17,7 @@ export default function RecorridoScreen() {
   const [lugarId, setLugarId] = useState<string | null>(null);
   const [nota, setNota] = useState('');
   const [foto, setFoto] = useState<string | null>(null);
+  const [imagenesFallidas, setImagenesFallidas] = useState<Record<string, boolean>>({});
 
   useEffect(() => { void listarLugares().then((res) => { setLugares(res.datos); setLugarId(res.datos[0]?.id ?? null); }); }, []);
 
@@ -85,7 +87,7 @@ export default function RecorridoScreen() {
         <Text style={styles.intro}>Cada visita desbloquea la imagen de un lugar y suma una nueva huella a tu pasaporte.</Text>
         <View style={styles.stampsGrid}>
           {sellos.map(({ lugar, desbloqueado, categoria }) => <View key={lugar.id} style={styles.stampCard}>
-            {lugar.imagenes[0] ? <Image source={{ uri: lugar.imagenes[0] }} style={[styles.stampImage, !desbloqueado && styles.stampImageLocked]} resizeMode="cover" accessibilityLabel={`Imagen de ${lugar.nombre}`} /> : <View style={styles.stampImageFallback}><Text style={styles.stampImageFallbackText}>Sin imagen</Text></View>}
+            <Image source={imagenesFallidas[lugar.id] ? imagenDeLugar() : imagenDeLugar(lugar.imagenes[0])} style={[styles.stampImage, !desbloqueado && styles.stampImageLocked]} resizeMode="cover" accessibilityLabel={`Imagen de ${lugar.nombre}`} onError={() => setImagenesFallidas((actuales) => ({ ...actuales, [lugar.id]: true }))} />
             <View style={styles.stampBody}>
               <Text style={styles.stampTitle} numberOfLines={2}>{desbloqueado ? lugar.nombre : 'Sello por descubrir'}</Text>
               <Text style={styles.stampCategory}>{desbloqueado ? categoria?.nombre ?? 'Lugar turístico' : 'Visitá este lugar para desbloquearlo'}</Text>
