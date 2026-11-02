@@ -20,7 +20,6 @@ La app permite explorar lugares, consultar eventos, armar un recorrido personal,
 ## Documentación
 
 - [Documentación funcional y técnica](DOCUMENTACION_PROYECTO.md)
-- [Auditoría del estado actual](AUDITORIA_APP.md)
 
 ## Ejecutar el proyecto
 
