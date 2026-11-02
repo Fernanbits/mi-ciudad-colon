@@ -45,6 +45,7 @@ La aplicación propone una entrada más simple:
 - Detalle de cada lugar con descripción, ubicación y acciones relacionadas.
 - Agenda de eventos.
 - Recorrido personal a partir de lugares seleccionados.
+- Pasaporte turístico visual con progreso, sellos por lugar e insignias.
 - Favoritos persistentes.
 - Registro de visitas por QR, ubicación o carga manual.
 - Nota y fotografía asociadas a una visita.
@@ -66,6 +67,23 @@ La aplicación propone una entrada más simple:
 - Pruebas automatizadas completas.
 
 Dejar estas tareas explícitamente fuera del MVP ayuda a no confundir una demostración académica con un producto terminado.
+
+### Pasaporte turístico
+
+El pasaporte es una capa de gamificación liviana que acompaña el recorrido sin convertir la app en un juego separado. Su objetivo es motivar la exploración y dejar una representación visual de los lugares conocidos.
+
+La pantalla muestra:
+
+- cantidad de lugares únicos descubiertos sobre el total del catálogo;
+- porcentaje de avance del pasaporte;
+- cantidad de categorías visitadas;
+- insignias por hitos de exploración;
+- una colección de tarjetas con imágenes reales de los lugares;
+- estado desbloqueado o pendiente para cada sello.
+
+Un sello se considera desbloqueado cuando existe al menos una visita para ese lugar. La visita puede provenir de un QR, de la ubicación GPS o de un registro manual. Por eso el pasaporte reutiliza las visitas ya guardadas y no mantiene una segunda fuente de datos que pueda quedar desactualizada.
+
+Las tarjetas pendientes conservan la imagen del destino, con menor intensidad visual y un mensaje que invita a descubrirlo. Las tarjetas desbloqueadas muestran el nombre del lugar y su categoría. De esta manera, las fotografías también funcionan como inspiración para planificar la siguiente visita.
 
 ## 4. Tecnologías elegidas
 
@@ -135,6 +153,8 @@ Acciones transversales:
 └── Reproducir audioguía
 ```
 
+Dentro de **Mi recorrido**, el pasaporte aparece antes del formulario de registro. La persona puede consultar su progreso, revisar los sellos y luego registrar una nueva visita desde la misma pantalla.
+
 ## 7. Integración con la API
 
 La URL se obtiene desde `EXPO_PUBLIC_API_URL`. La capa `src/servicios/api.ts` centraliza:
@@ -197,7 +217,7 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
-También se probó el flujo de apertura con Expo Go en Android, la carga del catálogo, el uso de imágenes reales, la navegación principal y la persistencia local.
+También se probó el flujo de apertura con Expo Go en Android, la carga del catálogo, el uso de imágenes reales, la navegación principal, la colección visual del pasaporte y la persistencia local.
 
 La verificación no equivale todavía a una batería de pruebas automatizadas. En una etapa posterior sería conveniente agregar pruebas unitarias para servicios y pruebas de recorrido para login, favoritos, registro de visitas y sincronización.
 
