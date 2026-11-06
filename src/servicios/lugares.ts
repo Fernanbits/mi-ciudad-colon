@@ -7,16 +7,54 @@ const CLAVE_ACTUALIZACION_INICIAL = '2000-01-01T00:00:00-03:00';
 let catalogoEnMemoria: Lugar[] | null = null;
 let categoriasEnMemoria: Categoria[] | null = null;
 
+// Son archivos ilustrativos que la API usa para poblar el catálogo de desarrollo.
+// No los mostramos como si fueran fotografías reales de Colón.
+const MEDIOS_DE_PRUEBA = new Set([
+  'beaches-1.png',
+  'beaches-2.png',
+  'crafts-1.png',
+  'crafts-2.png',
+  'gastronomy-1.png',
+  'gastronomy-2.png',
+  'hot-springs-1.png',
+  'hot-springs-2.png',
+  'lodging-1.png',
+  'lodging-2.png',
+  'museums-1.png',
+  'museums-2.png',
+  'nature-1.png',
+  'nature-2.png',
+]);
+
+function esMedioDePrueba(url: string): boolean {
+  const nombreArchivo = url.split('?')[0].split('/').pop()?.toLowerCase();
+  return nombreArchivo ? MEDIOS_DE_PRUEBA.has(nombreArchivo) : false;
+}
+
 function conservarImagenesCuradas(catalogoRemoto: Lugar[]): Lugar[] {
   const imagenesLocales = new Map<string, string[]>(lugares.map((lugar) => [lugar.id, lugar.imagenes]));
   imagenesLocales.set('lug-003', [
     'https://commons.wikimedia.org/wiki/Special:FilePath/Entrada_del_Camping_Piedras_Coloradas.JPG?width=1280',
   ]);
+  imagenesLocales.set('lug-014', [
+    'https://colon.gov.ar/wp-content/uploads/2023/09/OBRA-COSTANERA-balaustres-1-9-2023-2-scaled.jpg',
+  ]);
+  imagenesLocales.set('lug-015', [
+    'https://colon.gov.ar/wp-content/uploads/2025/12/WhatsApp-Image-2025-12-16-at-19.31.19.jpeg',
+  ]);
+  imagenesLocales.set('lug-008', ['https://media.elentrerios.com/fotos-emb/2024/08/09/o_1723200219.jpg']);
+  imagenesLocales.set('lug-016', ['https://www.argentinaviajera.com.ar/2023/img/entrerios/colon/puente.jpg']);
+  imagenesLocales.set('lug-011', ['https://www.turismoentrerios.com/quehacemos/img-actividades/167-uno.jpeg']);
+  imagenesLocales.set('lug-012', ['https://www.entreriosturismo.com.ar/img/palacio-san-jose-entre-rios.jpg']);
+  imagenesLocales.set('lug-013', ['https://www.welcomeargentina.com/paseos/museo-colonia-san-jose/museo-historico-colonia-san-jose-1.jpg']);
+  imagenesLocales.set('lug-018', ['https://termasvillaelisa.com/wp-content/uploads/2023/07/termas-villa-elisa-1.jpg']);
   return catalogoRemoto.map((lugar) => ({
     ...lugar,
-    // Las imágenes seleccionadas para la entrega tienen prioridad en los lugares que ya
-    // documentamos localmente. Los lugares nuevos de la API conservan su imagen remota.
-    imagenes: imagenesLocales.get(lugar.id)?.length ? imagenesLocales.get(lugar.id)! : lugar.imagenes,
+    // Las imágenes seleccionadas para la entrega tienen prioridad. Para los lugares nuevos,
+    // descartamos los PNG ilustrativos del seed hasta contar con una fotografía verificada.
+    imagenes: imagenesLocales.get(lugar.id)?.length
+      ? imagenesLocales.get(lugar.id)!
+      : lugar.imagenes.filter((url) => !esMedioDePrueba(url)),
   }));
 }
 
@@ -24,6 +62,9 @@ async function cargarCatalogoRemoto(): Promise<Lugar[]> {
   const respuesta = await pedirApi<RespuestaListaApi<Lugar>>(
     `/lugares?porPagina=500&actualizadoDesde=${encodeURIComponent(CLAVE_ACTUALIZACION_INICIAL)}`,
   );
+  if (respuesta.datos.length === 0) {
+    throw new Error('La API respondió un catálogo vacío. Se conserva la última copia disponible.');
+  }
   const datos = conservarImagenesCuradas(respuesta.datos);
   await guardarCatalogoLocal(datos);
   catalogoEnMemoria = datos;
@@ -40,7 +81,7 @@ async function catalogoDisponible(): Promise<Lugar[]> {
     }
   }
   const cache = await leerCatalogoLocal();
-  if (cache) {
+  if (cache?.length) {
     const normalizado = conservarImagenesCuradas(cache);
     catalogoEnMemoria = normalizado;
     await guardarCatalogoLocal(normalizado);
@@ -80,6 +121,7 @@ export async function listarCategorias(): Promise<Categoria[]> {
   if (apiConfigurada()) {
     try {
       const respuesta = await pedirApi<RespuestaListaApi<Categoria>>('/categorias');
+      if (respuesta.datos.length === 0) throw new Error('La API respondió sin categorías.');
       categoriasEnMemoria = respuesta.datos;
       await guardarCategoriasLocal(respuesta.datos);
       return respuesta.datos;
@@ -88,7 +130,7 @@ export async function listarCategorias(): Promise<Categoria[]> {
     }
   }
   const cache = await leerCategoriasLocal();
-  if (cache) {
+  if (cache?.length) {
     categoriasEnMemoria = cache;
     return cache;
   }

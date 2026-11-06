@@ -9,6 +9,7 @@ async function cargarEventosDisponibles(): Promise<Evento[]> {
   if (apiConfigurada()) {
     try {
       const respuesta = await pedirApi<RespuestaListaApi<Evento>>('/eventos?porPagina=100');
+      if (respuesta.datos.length === 0) throw new Error('La API respondió sin eventos.');
       eventosEnMemoria = respuesta.datos;
       return respuesta.datos;
     } catch {

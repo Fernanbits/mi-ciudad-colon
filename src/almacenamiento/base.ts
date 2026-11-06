@@ -16,8 +16,8 @@ export async function inicializarBase(db: SQLiteDatabase) {
   `);
 }
 
-export async function listarVisitas(db: SQLiteDatabase): Promise<Visita[]> {
-  return db.getAllAsync<Visita>('SELECT * FROM visitas ORDER BY fechaHora DESC');
+export async function listarVisitas(db: SQLiteDatabase, usuarioId: string): Promise<Visita[]> {
+  return db.getAllAsync<Visita>('SELECT * FROM visitas WHERE usuarioId = ? ORDER BY fechaHora DESC', usuarioId);
 }
 
 export async function guardarVisita(db: SQLiteDatabase, visita: Visita): Promise<void> {

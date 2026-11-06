@@ -48,13 +48,13 @@ La aplicación propone una entrada más simple:
 - Pasaporte turístico visual con progreso, sellos por lugar e insignias.
 - Favoritos persistentes.
 - Registro de visitas por QR, ubicación o carga manual.
-- Nota y fotografía asociadas a una visita.
+- Nota y fotografía asociadas a una visita. La fotografía se conserva localmente y se sube al backend durante la sincronización cuando hay sesión y conexión.
 - Mapa y cálculo de distancia cuando el dispositivo entrega ubicación.
 - Inicio de sesión y registro contra la API cuando está configurada.
 - Persistencia local de catálogo, preferencias y visitas.
 - Cola local para visitas que todavía no pudieron sincronizarse.
 - Pantallas de permisos para ubicación, cámara, galería, notificaciones y biometría.
-- Audioguías preparadas para los contenidos que tengan un recurso disponible.
+- Audioguías por archivo remoto cuando la API entrega un recurso válido y narración local de la descripción como respaldo cuando el recurso no está disponible.
 
 ### Fuera del alcance actual
 
@@ -62,8 +62,7 @@ La aplicación propone una entrada más simple:
 - Moderación de fotografías y comentarios.
 - Pagos, reservas o venta de entradas.
 - Chat con prestadores turísticos.
-- Notificaciones push remotas listas para producción.
-- Subida multipart de fotografías locales al servidor.
+- Configuración de notificaciones push remotas en producción: la API está preparada, pero el móvil necesita un development build con credenciales de Expo.
 - Pruebas automatizadas completas.
 
 Dejar estas tareas explícitamente fuera del MVP ayuda a no confundir una demostración académica con un producto terminado.
@@ -83,7 +82,7 @@ La pantalla muestra:
 
 Un sello se considera desbloqueado cuando existe al menos una visita para ese lugar. La visita puede provenir de un QR, de la ubicación GPS o de un registro manual. Por eso el pasaporte reutiliza las visitas ya guardadas y no mantiene una segunda fuente de datos que pueda quedar desactualizada.
 
-Las tarjetas pendientes conservan la imagen del destino, con menor intensidad visual y un mensaje que invita a descubrirlo. Las tarjetas desbloqueadas muestran el nombre del lugar y su categoría. De esta manera, las fotografías también funcionan como inspiración para planificar la siguiente visita.
+Las tarjetas pendientes conservan la imagen del destino, con menor intensidad visual, cuando existe una fotografía verificada. Cuando no hay una fuente confiable, se muestra el estado neutro “Foto pendiente” en lugar de usar una ilustración genérica. Las tarjetas desbloqueadas muestran el nombre del lugar y su categoría.
 
 ## 4. Tecnologías elegidas
 
@@ -95,6 +94,7 @@ Las tarjetas pendientes conservan la imagen del destino, con menor intensidad vi
 | Lenguaje | TypeScript | Ayuda a detectar errores en los modelos y servicios. |
 | Persistencia | SQLite y `expo-sqlite/kv-store` | Permite conservar visitas, caché y preferencias en el teléfono. |
 | API | HTTP/JSON con `fetch` | Mantiene la integración simple y compatible con la API provista. |
+| Voz y audio | `expo-speech` y `expo-audio` | Reproduce un archivo remoto cuando está disponible y usa la voz instalada en el teléfono como respaldo audible. |
 | Diseño | Manrope, colores de marca y componentes propios | Busca una identidad turística moderna y consistente. |
 
 ## 5. Arquitectura general
@@ -128,7 +128,7 @@ Contexto global de la aplicación
 - `src/almacenamiento`: lectura y escritura local.
 - `src/mocks`: datos de respaldo para que el proyecto también pueda demostrarse sin API.
 - `src/tipos`: contratos TypeScript para lugares, eventos, usuarios y visitas.
-- `src/theme`: colores, tipografías y estilos asociados a la marca.
+- `src/contexto/TemaContext.tsx`: colores, modos claro/oscuro/sistema y preferencias visuales de la marca.
 
 ## 6. Navegación de la app
 
@@ -150,10 +150,10 @@ Acciones transversales:
 ├── Escanear QR
 ├── Usar ubicación
 ├── Elegir fotografía
-└── Reproducir audioguía
+└── Reproducir audioguía o leer descripción
 ```
 
-Dentro de **Mi recorrido**, el pasaporte aparece antes del formulario de registro. La persona puede consultar su progreso, revisar los sellos y luego registrar una nueva visita desde la misma pantalla.
+Dentro de **Mi recorrido**, la acción principal aparece primero: la persona puede escanear un QR, usar su ubicación o iniciar un registro manual. Después puede completar el lugar, la fotografía y la nota; al final consulta el pasaporte, los sellos y el historial. Este orden prioriza la tarea que motivó la entrada a la pantalla y deja la gamificación como refuerzo.
 
 ## 7. Integración con la API
 
@@ -174,7 +174,7 @@ La sincronización actual funciona de esta manera:
 3. Si el servidor responde correctamente, se marca como sincronizada.
 4. Si falla la red, el registro permanece local para reintentarlo.
 
-Las fotografías elegidas desde el dispositivo todavía no se suben al servidor. Se conserva su URI local y se envía solamente una URL remota cuando ya existe. Esta es una limitación conocida y no se presenta como una funcionalidad terminada.
+Las fotografías elegidas desde el dispositivo se conservan localmente junto con la visita. Cuando existe una sesión y vuelve la conexión, la app las sube a `POST /archivos`, guarda la URL devuelta y recién después envía la visita a `POST /yo/visitas`. Si la subida o el envío falla, la visita permanece pendiente para reintentarla.
 
 ## 8. Permisos y privacidad
 
@@ -183,8 +183,10 @@ La aplicación puede solicitar:
 - **Ubicación:** mostrar lugares cercanos y calcular distancias.
 - **Cámara:** leer códigos QR y registrar una visita.
 - **Galería:** asociar una fotografía a un recuerdo.
-- **Notificaciones:** avisos locales o futuros recordatorios.
+- **Notificaciones:** recordatorios locales para eventos; el registro de tokens push queda preparado para un development build con EAS.
 - **Biometría:** facilitar el reingreso al dispositivo.
+
+La aplicación incluye modo claro, modo oscuro y modo sistema. La preferencia se guarda localmente y se aplican colores de superficie, texto, bordes y acciones con contraste diferenciado para cada tema.
 
 Los permisos se consideran opcionales para la experiencia base. Si una persona los rechaza, la app debe continuar ofreciendo el catálogo y las funciones que no dependan de ese permiso.
 
@@ -225,19 +227,20 @@ La verificación no equivale todavía a una batería de pruebas automatizadas. E
 
 - La API puede no tener información completa para todos los campos del PDR.
 - La experiencia offline depende de que el catálogo haya sido guardado previamente.
-- El envío de fotografías al backend todavía no está implementado.
-- Las notificaciones push remotas requieren un development build y configuración adicional.
+- Los MP3 de semilla de la API se inspeccionaron y tenían volumen prácticamente nulo: cargaban como archivo, pero no eran una narración audible. Para no presentar ese recurso como contenido real, el reproductor usa la descripción del lugar mediante `expo-speech` cuando detecta una URL de prueba o cuando el archivo remoto no termina de cargar. Si el backend entrega un audio real, `expo-audio` conserva reproducción, pausa, avance, retroceso y descarga. En el dispositivo de prueba se utiliza la voz `es-US` disponible en Android.
+- `npm audit` informa vulnerabilidades moderadas transitivas en `glob` y `minimatch` dentro de herramientas de Expo. La corrección automática propone bajar a Expo 53, por lo que no se aplicó de forma forzada sobre este proyecto SDK 58; se debe volver a revisar cuando Expo publique una actualización compatible.
+- La API ya implementa el registro y envío de notificaciones push, pero el cliente móvil necesita un `expo.extra.eas.projectId` y un development build para probarlas en un dispositivo; Expo Go se mantiene como entorno de recordatorios locales.
 - El cálculo de distancia depende del permiso y de la precisión de ubicación del dispositivo.
 - El proyecto se verificó principalmente en Android; iOS requiere una pasada específica.
-- Todavía falta una revisión sistemática de accesibilidad, rendimiento y licencias de imágenes.
+- La interfaz incorpora etiquetas para lectores de pantalla, roles en acciones y selectores, textos alternativos para imágenes, áreas táctiles claras y modo oscuro. Todavía falta una prueba manual completa con TalkBack, tamaños de fuente del sistema y distintos teléfonos.
 
 ## 12. Próximos pasos razonables
 
 1. Completar pruebas manuales en un dispositivo Android y un emulador.
 2. Agregar pruebas unitarias para API, almacenamiento y sincronización.
-3. Implementar la carga segura de fotografías.
-4. Definir contenidos y archivos definitivos para las audioguías.
-5. Revisar textos, contraste, tamaños táctiles y accesibilidad.
+3. Probar en Android la carga multipart de fotografías y los límites de tamaño definidos por la API.
+4. Evaluar una voz cloud latinoamericana para producción y mantener `expo-speech` como alternativa offline; en la entrega actual se prioriza la voz `es-US` instalada en el dispositivo.
+5. Probar la accesibilidad con TalkBack, tamaño de fuente ampliado y contraste del modo oscuro.
 6. Configurar un build de demostración con EAS.
 7. Reemplazar datos de respaldo por un catálogo administrable cuando exista un backend estable.
 

@@ -1,9 +1,13 @@
-import { listarVisitas, marcarVisitaSincronizada } from '../almacenamiento/base';
+import { guardarVisita, listarVisitas } from '../almacenamiento/base';
 import { SQLiteDatabase } from 'expo-sqlite';
 import { Visita } from '../tipos/modelos';
 import { apiConfigurada, pedirApi, RespuestaListaApi, RespuestaUnoApi } from './api';
+import { subirFotoVisita } from './archivos';
 
 export async function enviarVisita(visita: Visita, token: string): Promise<Visita> {
+  const fotoUri = visita.fotoUri && !visita.fotoUri.startsWith('http')
+    ? await subirFotoVisita(visita.fotoUri, visita.id, token)
+    : visita.fotoUri;
   const respuesta = await pedirApi<RespuestaUnoApi<Visita>>('/yo/visitas', {
     method: 'POST',
     token,
@@ -12,9 +16,7 @@ export async function enviarVisita(visita: Visita, token: string): Promise<Visit
       lugarId: visita.lugarId,
       fechaHora: visita.fechaHora,
       origen: visita.origen,
-      // Un archivo local no se puede enviar al servidor todavía. La visita sí se sincroniza;
-      // la foto queda en el teléfono hasta implementar la subida multipart a /archivos.
-      fotoUri: visita.fotoUri?.startsWith('http') ? visita.fotoUri : null,
+      fotoUri,
       nota: visita.nota,
     },
   });
@@ -27,13 +29,18 @@ export async function sincronizarVisitasPendientes(
   token: string,
 ): Promise<number> {
   if (!apiConfigurada()) return 0;
-  const locales = await listarVisitas(db);
+  const locales = await listarVisitas(db, usuarioId);
   const pendientes = locales.filter((visita) => visita.usuarioId === usuarioId && !visita.sincronizada);
   let sincronizadas = 0;
   for (const visita of pendientes) {
     try {
-      await enviarVisita(visita, token);
-      await marcarVisitaSincronizada(db, visita.id);
+      let preparada = visita;
+      if (visita.fotoUri && !visita.fotoUri.startsWith('http')) {
+        preparada = { ...visita, fotoUri: await subirFotoVisita(visita.fotoUri, visita.id, token) };
+        await guardarVisita(db, preparada);
+      }
+      const remota = await enviarVisita(preparada, token);
+      await guardarVisita(db, { ...preparada, ...remota, sincronizada: true });
       sincronizadas += 1;
     } catch {
       // La cola queda local para reintentar cuando vuelva la red o se abra la app.

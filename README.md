@@ -86,4 +86,4 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
-El proyecto todavía se considera una entrega académica. Antes de una publicación real habría que completar pruebas automatizadas, una revisión de accesibilidad, la carga de fotografías al servidor, la configuración de notificaciones remotas y una estrategia de despliegue.
+El proyecto todavía se considera una entrega académica. Antes de una publicación real habría que completar pruebas automatizadas, una validación manual con TalkBack, la configuración de credenciales para notificaciones remotas y una estrategia de despliegue.

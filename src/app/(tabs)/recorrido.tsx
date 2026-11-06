@@ -2,29 +2,48 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { categorias } from '../../mocks/datos';
-import { imagenDeLugar } from '../../components/LugarCard';
+import { LugarImagen } from '../../components/LugarCard';
 import { guardarFotoVisita } from '../../servicios/archivos';
 import { distanciaEnMetros } from '../../servicios/distancias';
-import { listarLugares } from '../../servicios/lugares';
+import { listarCategorias, listarLugares } from '../../servicios/lugares';
 import { pedirUbicacionActual } from '../../servicios/ubicacion';
-import { Lugar, Visita } from '../../tipos/modelos';
+import { Categoria, Lugar, Visita } from '../../tipos/modelos';
 import { useAplicacion } from '../../contexto/AplicacionContext';
+import { EstadoView } from '../../components/EstadoView';
+import { useTema } from '../../contexto/TemaContext';
 
 export default function RecorridoScreen() {
   const { visitas, session, registrarVisita } = useAplicacion();
+  const { colores } = useTema();
   const [lugares, setLugares] = useState<Lugar[]>([]);
+  const [categoriasDisponibles, setCategoriasDisponibles] = useState<Categoria[]>([]);
   const [lugarId, setLugarId] = useState<string | null>(null);
   const [nota, setNota] = useState('');
   const [foto, setFoto] = useState<string | null>(null);
-  const [imagenesFallidas, setImagenesFallidas] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { void listarLugares().then((res) => { setLugares(res.datos); setLugarId(res.datos[0]?.id ?? null); }); }, []);
+  const cargar = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [res, cats] = await Promise.all([listarLugares(), listarCategorias()]);
+      setLugares(res.datos);
+      setCategoriasDisponibles(cats);
+      setLugarId(res.datos[0]?.id ?? null);
+    } catch {
+      setError('No pudimos cargar los lugares para armar tu recorrido.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void cargar(); }, []);
 
   const lugaresVisitados = useMemo(() => new Set(visitas.map((visita) => visita.lugarId)), [visitas]);
   const lugaresDescubiertos = useMemo(() => lugares.filter((lugar) => lugaresVisitados.has(lugar.id)), [lugares, lugaresVisitados]);
   const progreso = lugares.length ? Math.round((lugaresDescubiertos.length / lugares.length) * 100) : 0;
-  const categoriasDescubiertas = useMemo(() => categorias.filter((categoria) => lugaresDescubiertos.some((lugar) => lugar.categoriaId === categoria.id)), [lugaresDescubiertos]);
+  const categoriasDescubiertas = useMemo(() => categoriasDisponibles.filter((categoria) => lugaresDescubiertos.some((lugar) => lugar.categoriaId === categoria.id)), [categoriasDisponibles, lugaresDescubiertos]);
   const insignias = [
     { id: 'primera', simbolo: '✦', titulo: 'Primera huella', desbloqueada: lugaresDescubiertos.length >= 1 },
     { id: 'explorador', simbolo: '◆', titulo: 'Explorador', desbloqueada: lugaresDescubiertos.length >= 3 },
@@ -33,8 +52,10 @@ export default function RecorridoScreen() {
   const sellos = useMemo(() => lugares.map((lugar) => ({
     lugar,
     desbloqueado: lugaresVisitados.has(lugar.id),
-    categoria: categorias.find((categoria) => categoria.id === lugar.categoriaId),
-  })), [lugares, lugaresVisitados]);
+    categoria: categoriasDisponibles.find((categoria) => categoria.id === lugar.categoriaId),
+  })), [categoriasDisponibles, lugares, lugaresVisitados]);
+
+  if (loading || error) return <EstadoView loading={loading} error={error} onRetry={cargar} />;
 
   const elegirFoto = async () => {
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -61,49 +82,55 @@ export default function RecorridoScreen() {
   };
 
   const registrarPorGps = async () => {
-    const actual = await pedirUbicacionActual();
-    if (!actual) { Alert.alert('Ubicación no disponible', 'Podés elegir el lugar y registrarlo manualmente.'); return; }
-    const candidatos = lugares.map((lugar) => ({ lugar, metros: distanciaEnMetros({ latitud: actual.coords.latitude, longitud: actual.coords.longitude }, lugar.coordenadas) })).sort((a, b) => a.metros - b.metros);
-    const cercano = candidatos[0];
-    if (!cercano || cercano.metros > 500) { Alert.alert('No encontramos un lugar cerca', 'Acercate a un lugar del catálogo o registrá la visita manualmente.'); return; }
-    setLugarId(cercano.lugar.id); await registrar('gps', cercano.lugar.id);
+    try {
+      const actual = await pedirUbicacionActual();
+      if (!actual) { Alert.alert('Ubicación no disponible', 'Podés elegir el lugar y registrarlo manualmente.'); return; }
+      const candidatos = lugares.map((lugar) => ({ lugar, metros: distanciaEnMetros({ latitud: actual.coords.latitude, longitud: actual.coords.longitude }, lugar.coordenadas) })).sort((a, b) => a.metros - b.metros);
+      const cercano = candidatos[0];
+      if (!cercano || cercano.metros > 500) { Alert.alert('No encontramos un lugar cerca', 'Acercate a un lugar del catálogo o registrá la visita manualmente.'); return; }
+      setLugarId(cercano.lugar.id); await registrar('gps', cercano.lugar.id);
+    } catch {
+      Alert.alert('Ubicación no disponible', 'No pudimos calcular tu cercanía. Podés elegir el lugar y registrarlo manualmente.');
+    }
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.eyebrow}>MI RECORRIDO</Text>
-      <Text style={styles.title}>La visita queda con vos</Text>
-      <Text style={styles.intro}>Registrá un lugar por QR, por cercanía o manualmente. La memoria se guarda primero en el teléfono.</Text>
-      <View style={styles.permissionNotice}><Text style={styles.permissionTitle}>Permisos, solo cuando hacen falta</Text><Text style={styles.permissionText}>Ubicación para “Estoy acá”, cámara para QR o fotos, galería para elegir una imagen y notificaciones al guardar un recordatorio.</Text></View>
-      <View style={styles.passport} accessibilityLabel={`Pasaporte de Colón: ${lugaresDescubiertos.length} de ${lugares.length} lugares descubiertos`}>
-        <View style={styles.passportHeader}><View style={styles.passportCopy}><Text style={styles.passportEyebrow}>PASAPORTE DE COLÓN</Text><Text style={styles.passportTitle}>Tus huellas hacen el mapa</Text></View><Text style={styles.passportScore}>{lugaresDescubiertos.length}/{lugares.length}</Text></View>
-        <Text style={styles.passportText}>{lugaresDescubiertos.length === 0 ? 'Visitá tu primer lugar para empezar a completar la ciudad.' : `${progreso}% de Colón recorrido. Cada visita queda guardada en tu teléfono.`}</Text>
-        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progreso}%` }]} /></View>
-        <View style={styles.passportMeta}><Text style={styles.passportMetaText}>{categoriasDescubiertas.length} categorías descubiertas</Text><Text style={styles.passportMetaText}>{lugaresDescubiertos.length} lugares únicos</Text></View>
-        <View style={styles.badgesRow}>{insignias.map((insignia) => <View key={insignia.id} style={[styles.badge, !insignia.desbloqueada && styles.badgeLocked]}><Text style={styles.badgeSymbol}>{insignia.simbolo}</Text><Text style={styles.badgeTitle}>{insignia.desbloqueada ? insignia.titulo : 'Por descubrir'}</Text></View>)}</View>
+    <ScrollView style={StyleSheet.flatten([styles.screen, { backgroundColor: colores.fondo }])} contentContainerStyle={styles.content}>
+      <Text style={[styles.eyebrow, { color: colores.texto }]}>MI RECORRIDO</Text>
+      <Text style={[styles.title, { color: colores.texto }]}>La visita queda con vos</Text>
+      <Text style={[styles.intro, { color: colores.textoSuave }]}>Registrá un lugar por QR, por cercanía o manualmente. La memoria se guarda primero en el teléfono.</Text>
+      <View style={[styles.permissionNotice, { backgroundColor: colores.superficieSuave }]}><Text style={[styles.permissionTitle, { color: colores.texto }]}>Permisos, solo cuando hacen falta</Text><Text style={[styles.permissionText, { color: colores.textoSuave }]}>Ubicación para “Estoy acá”, cámara para QR o fotos, galería para elegir una imagen y notificaciones al guardar un recordatorio.</Text></View>
+      <Text style={[styles.sectionTitle, { color: colores.texto }]}>Registrá tu visita</Text>
+      <Text style={[styles.intro, { color: colores.textoSuave }]}>Elegí una opción rápida o completá el registro manualmente.</Text>
+      <View style={styles.actions} accessibilityLabel="Acciones para registrar una visita"><Pressable accessibilityRole="button" accessibilityLabel="Escanear código QR" accessibilityHint="Abre la cámara para identificar el lugar" style={[styles.primary, { backgroundColor: colores.principal }]} onPress={() => router.push('/modal/qr')}><Text style={[styles.primaryText, { color: colores.principalTexto }]}>Escanear QR</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Registrar el lugar donde estoy" accessibilityHint="Usa tu ubicación actual para encontrar un lugar cercano" style={[styles.secondary, { borderColor: colores.principal }]} onPress={() => void registrarPorGps()}><Text style={[styles.secondaryText, { color: colores.principal }]}>Estoy acá</Text></Pressable></View>
+      <Text style={[styles.sectionTitle, { color: colores.texto }]}>¿Qué lugar visitaste?</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.placeList} accessibilityLabel="Lugares para seleccionar">{lugares.map((lugar) => <Pressable key={lugar.id} accessibilityRole="radio" accessibilityState={{ selected: lugarId === lugar.id }} accessibilityLabel={`Seleccionar ${lugar.nombre}`} onPress={() => setLugarId(lugar.id)} style={[styles.placeChip, { backgroundColor: colores.superficie, borderColor: colores.borde }, lugarId === lugar.id && { backgroundColor: colores.principal, borderColor: colores.principal }]}><Text style={[styles.placeChipText, { color: colores.textoSuave }, lugarId === lugar.id && { color: colores.principalTexto }]}>{lugar.nombre}</Text></Pressable>)}</ScrollView>
+      <View style={styles.photoActions}><Pressable accessibilityRole="button" accessibilityLabel="Sacar una foto" style={[styles.photoButton, { backgroundColor: colores.superficieSuave }]} onPress={() => void sacarFoto()}><Text style={[styles.photoButtonText, { color: colores.verde }]}>Sacar foto</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Elegir una foto de la galería" style={[styles.photoButton, { backgroundColor: colores.superficieSuave }]} onPress={() => void elegirFoto()}><Text style={[styles.photoButtonText, { color: colores.verde }]}>Elegir de galería</Text></Pressable></View>
+      {foto && <Image source={{ uri: foto }} style={styles.preview} accessibilityLabel="Foto elegida para la visita" />}
+      <TextInput value={nota} onChangeText={setNota} placeholder="Una nota corta sobre este momento" placeholderTextColor={colores.placeholder} style={[styles.input, { backgroundColor: colores.superficie, borderColor: colores.borde, color: colores.texto }]} multiline maxLength={180} accessibilityLabel="Nota de la visita" />
+      <Pressable accessibilityRole="button" accessibilityLabel="Guardar visita manual" style={[styles.manual, { backgroundColor: colores.principal }]} onPress={() => void registrar('manual')}><Text style={[styles.manualText, { color: colores.principalTexto }]}>Guardar visita manual</Text></Pressable>
+      <View style={[styles.passport, { backgroundColor: colores.principal }]} accessibilityLabel={`Pasaporte de Colón: ${lugaresDescubiertos.length} de ${lugares.length} lugares descubiertos`}>
+        <View style={styles.passportHeader}><View style={styles.passportCopy}><Text style={[styles.passportEyebrow, { color: colores.arena }]}>PASAPORTE DE COLÓN</Text><Text style={[styles.passportTitle, { color: colores.principalTexto }]}>Tus huellas hacen el mapa</Text></View><Text style={[styles.passportScore, { color: colores.principalTexto }]}>{lugaresDescubiertos.length}/{lugares.length}</Text></View>
+        <Text style={[styles.passportText, { color: colores.principalTexto }]}>{lugaresDescubiertos.length === 0 ? 'Visitá tu primer lugar para empezar a completar la ciudad.' : `${progreso}% de Colón recorrido. Cada visita queda guardada en tu teléfono.`}</Text>
+        <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progreso}%`, backgroundColor: colores.acento }]} /></View>
+        <View style={styles.passportMeta}><Text style={[styles.passportMetaText, { color: colores.principalTexto }]}>{categoriasDescubiertas.length} categorías descubiertas</Text><Text style={[styles.passportMetaText, { color: colores.principalTexto }]}>{lugaresDescubiertos.length} lugares únicos</Text></View>
+        <View style={styles.badgesRow}>{insignias.map((insignia) => <View key={insignia.id} style={[styles.badge, { borderColor: colores.arena }, !insignia.desbloqueada && styles.badgeLocked]}><Text style={[styles.badgeSymbol, { color: colores.arena }]}>{insignia.simbolo}</Text><Text style={[styles.badgeTitle, { color: colores.principalTexto }]}>{insignia.desbloqueada ? insignia.titulo : 'Por descubrir'}</Text></View>)}</View>
       </View>
       <View style={styles.stampsSection}>
-        <Text style={styles.sectionTitle}>Tu colección de sellos</Text>
-        <Text style={styles.intro}>Cada visita desbloquea la imagen de un lugar y suma una nueva huella a tu pasaporte.</Text>
+        <Text style={[styles.sectionTitle, { color: colores.texto }]}>Tu colección de sellos</Text>
+        <Text style={[styles.intro, { color: colores.textoSuave }]}>Cada visita desbloquea la imagen de un lugar y suma una nueva huella a tu pasaporte.</Text>
         <View style={styles.stampsGrid}>
-          {sellos.map(({ lugar, desbloqueado, categoria }) => <View key={lugar.id} style={styles.stampCard}>
-            <Image source={imagenesFallidas[lugar.id] ? imagenDeLugar() : imagenDeLugar(lugar.imagenes[0])} style={[styles.stampImage, !desbloqueado && styles.stampImageLocked]} resizeMode="cover" accessibilityLabel={`Imagen de ${lugar.nombre}`} onError={() => setImagenesFallidas((actuales) => ({ ...actuales, [lugar.id]: true }))} />
+          {sellos.map(({ lugar, desbloqueado, categoria }) => <View key={lugar.id} style={[styles.stampCard, { backgroundColor: colores.superficie, borderColor: colores.borde }]}>
+            <LugarImagen uri={lugar.imagenes[0]} nombre={lugar.nombre} categoria={categoria?.nombre} style={[styles.stampImage, { backgroundColor: colores.superficieSuave }, !desbloqueado && styles.stampImageLocked]} />
             <View style={styles.stampBody}>
-              <Text style={styles.stampTitle} numberOfLines={2}>{desbloqueado ? lugar.nombre : 'Sello por descubrir'}</Text>
-              <Text style={styles.stampCategory}>{desbloqueado ? categoria?.nombre ?? 'Lugar turístico' : 'Visitá este lugar para desbloquearlo'}</Text>
+              <Text style={[styles.stampTitle, { color: colores.texto }]} numberOfLines={2}>{desbloqueado ? lugar.nombre : 'Sello por descubrir'}</Text>
+              <Text style={[styles.stampCategory, { color: colores.textoMuted }]}>{desbloqueado ? categoria?.nombre ?? 'Lugar turístico' : 'Visitá este lugar para desbloquearlo'}</Text>
             </View>
           </View>)}
         </View>
       </View>
-      <View style={styles.actions}><Pressable style={styles.primary} onPress={() => router.push('/modal/qr')}><Text style={styles.primaryText}>Escanear QR</Text></Pressable><Pressable style={styles.secondary} onPress={() => void registrarPorGps()}><Text style={styles.secondaryText}>Estoy acá</Text></Pressable></View>
-      <Text style={styles.sectionTitle}>¿Qué lugar visitaste?</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.placeList}>{lugares.map((lugar) => <Pressable key={lugar.id} onPress={() => setLugarId(lugar.id)} style={[styles.placeChip, lugarId === lugar.id && styles.placeChipActive]}><Text style={[styles.placeChipText, lugarId === lugar.id && styles.placeChipTextActive]}>{lugar.nombre}</Text></Pressable>)}</ScrollView>
-      <View style={styles.photoActions}><Pressable style={styles.photoButton} onPress={() => void sacarFoto()}><Text style={styles.photoButtonText}>Sacar foto</Text></Pressable><Pressable style={styles.photoButton} onPress={() => void elegirFoto()}><Text style={styles.photoButtonText}>Elegir de galería</Text></Pressable></View>
-      {foto && <Image source={{ uri: foto }} style={styles.preview} accessibilityLabel="Foto elegida para la visita" />}
-      <TextInput value={nota} onChangeText={setNota} placeholder="Una nota corta sobre este momento" placeholderTextColor="#aaa49d" style={styles.input} multiline maxLength={180} />
-      <Pressable style={styles.manual} onPress={() => void registrar('manual')}><Text style={styles.manualText}>Guardar visita manual</Text></Pressable>
-      <Text style={styles.subTitle}>Visitas guardadas ({visitas.length})</Text>
-      {visitas.length === 0 ? <View style={styles.empty}><Text style={styles.emptyTitle}>Todavía no registraste visitas</Text><Text style={styles.intro}>Escaneá un QR o elegí un lugar para comenzar.</Text></View> : visitas.map((visita) => <View key={visita.id} style={styles.visit}><Text style={styles.visitTitle}>{lugares.find((lugar) => lugar.id === visita.lugarId)?.nombre ?? 'Lugar visitado'}</Text><Text style={styles.visitMeta}>{new Date(visita.fechaHora).toLocaleString('es-AR')} · {visita.origen.toUpperCase()} · {visita.sincronizada ? 'sincronizada' : 'pendiente'}</Text>{visita.fotoUri && <Image source={{ uri: visita.fotoUri }} style={styles.visitPhoto} />}{visita.nota && <Text style={styles.visitNote}>{visita.nota}</Text>}</View>)}
+      <Text style={[styles.subTitle, { color: colores.texto }]}>Visitas guardadas ({visitas.length})</Text>
+      {visitas.length === 0 ? <View style={[styles.empty, { backgroundColor: colores.superficie }]}><Text style={[styles.emptyTitle, { color: colores.texto }]}>Todavía no registraste visitas</Text><Text style={[styles.intro, { color: colores.textoSuave }]}>Escaneá un QR o elegí un lugar para comenzar.</Text></View> : visitas.map((visita) => <View key={visita.id} style={[styles.visit, { backgroundColor: colores.superficie, borderColor: colores.borde }]}><Text style={[styles.visitTitle, { color: colores.texto }]}>{lugares.find((lugar) => lugar.id === visita.lugarId)?.nombre ?? 'Lugar visitado'}</Text><Text style={[styles.visitMeta, { color: colores.textoMuted }]}>{new Date(visita.fechaHora).toLocaleString('es-AR')} · {visita.origen.toUpperCase()} · {visita.sincronizada ? 'sincronizada' : 'pendiente'}</Text>{visita.fotoUri && <Image source={{ uri: visita.fotoUri }} style={styles.visitPhoto} />}{visita.nota && <Text style={[styles.visitNote, { color: colores.textoSuave }]}>{visita.nota}</Text>}</View>)}
     </ScrollView>
   );
 }

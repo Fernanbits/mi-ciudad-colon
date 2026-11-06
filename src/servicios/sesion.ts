@@ -6,6 +6,7 @@ import { apiConfigurada, pedirApi, RespuestaUnoApi, SesionApi } from './api';
 
 const CLAVE_TOKEN = 'mi-ciudad.session.token';
 const CLAVE_USUARIO = 'mi-ciudad.session.user';
+const MINIMO_CONTRASENA = 8;
 
 async function guardarSesion(usuario: Usuario, token: string): Promise<void> {
   await SecureStore.setItemAsync(CLAVE_TOKEN, token);
@@ -15,6 +16,7 @@ async function guardarSesion(usuario: Usuario, token: string): Promise<void> {
 export async function iniciarSesion(email: string, password: string): Promise<Usuario> {
   if (!email.trim() || !email.includes('@')) throw new Error('Ingresá un email válido.');
   if (!password.trim()) throw new Error('Ingresá tu contraseña.');
+  if (password.length < MINIMO_CONTRASENA) throw new Error('La contraseña debe tener al menos 8 caracteres.');
   if (apiConfigurada()) {
     const respuesta = await pedirApi<RespuestaUnoApi<SesionApi>>('/auth/ingreso', {
       method: 'POST',
@@ -23,7 +25,6 @@ export async function iniciarSesion(email: string, password: string): Promise<Us
     await guardarSesion(respuesta.datos.usuario, respuesta.datos.token);
     return respuesta.datos.usuario;
   }
-  if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
   const usuario = { ...usuarioDemo, email: email.trim() };
   await guardarSesion(usuario, `local-session-${usuario.id}`);
   return usuario;

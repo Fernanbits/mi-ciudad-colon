@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { inicializarBase } from '../almacenamiento/base';
 import { SplashVideo } from '../components/SplashVideo';
 import { AplicacionProvider } from '../contexto/AplicacionContext';
+import { TemaProvider } from '../contexto/TemaContext';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -29,16 +30,18 @@ export default function RootLayout() {
 
   return (
     <SQLiteProvider databaseName="mi-ciudad.db" onInit={inicializarBase}>
-      <AplicacionProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="lugar/[id]" />
-          <Stack.Screen name="evento/[id]" />
-          <Stack.Screen name="auth/login" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="auth/registro" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="modal/qr" options={{ presentation: 'modal', title: 'Escanear QR' }} />
-        </Stack>
-      </AplicacionProvider>
+      <TemaProvider>
+        <AplicacionProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="lugar/[id]" />
+            <Stack.Screen name="evento/[id]" />
+            <Stack.Screen name="auth/login" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="auth/registro" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="modal/qr" options={{ presentation: 'modal', title: 'Escanear QR' }} />
+          </Stack>
+        </AplicacionProvider>
+      </TemaProvider>
     </SQLiteProvider>
   );
 }

@@ -5,14 +5,33 @@ import { leerEventosGuardados, guardarEventosGuardados, guardarNotificacionEvent
 import { listarEventos } from '../../servicios/eventos';
 import { cancelarRecordatorio, programarRecordatorio } from '../../servicios/notificaciones';
 import { Evento } from '../../tipos/modelos';
+import { EstadoView } from '../../components/EstadoView';
+import { useTema } from '../../contexto/TemaContext';
 
 const estadoTexto: Record<Evento['estado'], string> = { programado: 'Programado', suspendido: 'Suspendido', cancelado: 'Cancelado', finalizado: 'Finalizado' };
 
 export default function AgendaScreen() {
+  const { colores } = useTema();
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [guardados, setGuardados] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { void Promise.all([listarEventos(), leerEventosGuardados()]).then(([items, ids]) => { setEventos(items); setGuardados(ids); }); }, []);
+  const cargar = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [items, ids] = await Promise.all([listarEventos(), leerEventosGuardados()]);
+      setEventos(items);
+      setGuardados(ids);
+    } catch {
+      setError('No pudimos cargar la agenda. Revisá tu conexión e intentá nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void cargar(); }, []);
 
   const visibles = useMemo(() => eventos.filter((evento) => evento.estado !== 'finalizado').sort((a, b) => a.inicio.localeCompare(b.inicio)), [eventos]);
 
@@ -36,17 +55,17 @@ export default function AgendaScreen() {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.eyebrow}>AGENDA LOCAL</Text>
-      <Text style={styles.title}>Lo que pasa hoy y después</Text>
-      <Text style={styles.intro}>Guardá una actividad y Mi Ciudad te ayuda a no perderla. Si se suspende, el estado queda visible.</Text>
-      {visibles.map((evento) => {
+    <ScrollView style={StyleSheet.flatten([styles.screen, { backgroundColor: colores.fondo }])} contentContainerStyle={styles.content}>
+      <Text style={[styles.eyebrow, { color: colores.texto }]}>AGENDA LOCAL</Text>
+      <Text style={[styles.title, { color: colores.texto }]}>Lo que pasa hoy y después</Text>
+      <Text style={[styles.intro, { color: colores.textoSuave }]}>Guardá una actividad y Mi Ciudad te ayuda a no perderla. Si se suspende, el estado queda visible.</Text>
+      {loading || error ? <EstadoView loading={loading} error={error} onRetry={cargar} /> : visibles.length === 0 ? <Text style={[styles.intro, { color: colores.textoSuave }]}>No hay actividades próximas para mostrar.</Text> : visibles.map((evento) => {
         const fecha = new Date(evento.inicio);
         const guardado = guardados.includes(evento.id);
         const bloqueado = evento.estado === 'cancelado' || evento.estado === 'suspendido';
-        return <View key={evento.id} style={styles.card}>
-          <View style={[styles.date, bloqueado && styles.dateDisabled]}><Text style={styles.day}>{fecha.getDate()}</Text><Text style={styles.month}>{fecha.toLocaleDateString('es-AR', { month: 'short' }).toUpperCase()}</Text></View>
-          <View style={styles.copy}><Text style={[styles.status, bloqueado && styles.statusDisabled]}>{estadoTexto[evento.estado].toUpperCase()}</Text><Pressable onPress={() => router.push(`/evento/${evento.id}`)}><Text style={styles.cardTitle}>{evento.titulo}</Text></Pressable><Text style={styles.cardText}>{evento.descripcion}</Text><Text style={styles.meta}>{fecha.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })} · {evento.precio === 0 ? 'Gratis' : evento.precio == null ? 'Consultar' : `$${evento.precio.toLocaleString('es-AR')}`}</Text><Text style={styles.location}>{evento.direccionLibre ?? (evento.lugarId ? 'Lugar incluido en el catálogo' : 'Ubicación a confirmar')}</Text><Pressable disabled={bloqueado} style={[styles.button, bloqueado && styles.buttonDisabled]} onPress={() => void alternarEvento(evento)}><Text style={styles.buttonText}>{bloqueado ? estadoTexto[evento.estado] : guardado ? '✓ Guardado' : 'Guardar y avisarme'}</Text></Pressable></View>
+        return <View key={evento.id} style={[styles.card, { backgroundColor: colores.superficie, borderColor: colores.borde }]}>
+          <View style={[styles.date, { backgroundColor: colores.arena }, bloqueado && styles.dateDisabled]}><Text style={[styles.day, { color: colores.texto }]}>{fecha.getDate()}</Text><Text style={[styles.month, { color: colores.texto }]}>{fecha.toLocaleDateString('es-AR', { month: 'short' }).toUpperCase()}</Text></View>
+          <View style={styles.copy}><Text style={[styles.status, { color: colores.verde }, bloqueado && { color: colores.textoMuted }]}>{estadoTexto[evento.estado].toUpperCase()}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Abrir ${evento.titulo}`} onPress={() => router.push(`/evento/${evento.id}`)}><Text style={[styles.cardTitle, { color: colores.texto }]}>{evento.titulo}</Text></Pressable><Text style={[styles.cardText, { color: colores.textoSuave }]}>{evento.descripcion}</Text><Text style={[styles.meta, { color: colores.textoMuted }]}>{fecha.toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })} · {evento.precio === 0 ? 'Gratis' : evento.precio == null ? 'Consultar' : `$${evento.precio.toLocaleString('es-AR')}`}</Text><Text style={[styles.location, { color: colores.verde }]}>{evento.direccionLibre ?? (evento.lugarId ? 'Lugar incluido en el catálogo' : 'Ubicación a confirmar')}</Text><Pressable accessibilityRole="button" disabled={bloqueado} style={[styles.button, { backgroundColor: colores.principal }, bloqueado && styles.buttonDisabled]} onPress={() => void alternarEvento(evento)}><Text style={[styles.buttonText, { color: colores.principalTexto }]}>{bloqueado ? estadoTexto[evento.estado] : guardado ? '✓ Guardado' : 'Guardar y avisarme'}</Text></Pressable></View>
         </View>;
       })}
     </ScrollView>

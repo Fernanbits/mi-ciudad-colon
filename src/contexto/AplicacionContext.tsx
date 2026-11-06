@@ -1,12 +1,13 @@
 import * as Network from 'expo-network';
 import { useSQLiteContext } from 'expo-sqlite';
-import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { guardarVisita, listarVisitas } from '../almacenamiento/base';
 import { guardarFavoritos, leerFavoritos } from '../almacenamiento/preferencias';
 import { Favorito, Usuario, Visita } from '../tipos/modelos';
 import { autenticarConBiometria, cerrarSesion, iniciarSesion, obtenerTokenSesion, recuperarSesion, registrarUsuario } from '../servicios/sesion';
 import { apiConfigurada } from '../servicios/api';
 import { listarVisitasRemotas, sincronizarVisitasPendientes } from '../servicios/visitas';
+import { registrarDispositivoPush } from '../servicios/notificaciones';
 
 interface AplicacionContextValue {
   session: Usuario | null;
@@ -31,28 +32,45 @@ export function AplicacionProvider({ children }: PropsWithChildren) {
   const [visitas, setVisitas] = useState<Visita[]>([]);
   const [online, setOnline] = useState<boolean | null>(null);
 
-  const refreshVisitas = async () => setVisitas(await listarVisitas(db));
+  const usuarioActivoId = session?.id ?? 'anonimo';
+  const refreshVisitas = useCallback(async () => {
+    setVisitas(await listarVisitas(db, usuarioActivoId));
+  }, [db, usuarioActivoId]);
 
   useEffect(() => {
-    void Promise.all([recuperarSesion().then(setSession), leerFavoritos().then(setFavoritos), refreshVisitas(), Network.getNetworkStateAsync().then((state) => setOnline(state.isConnected ?? false))]);
+    void recuperarSesion().then(setSession);
+    void Network.getNetworkStateAsync().then((state) => setOnline(state.isConnected ?? false));
     const networkSubscription = Network.addNetworkStateListener((state) => setOnline(state.isConnected ?? false));
     return () => networkSubscription.remove();
   }, []);
 
   useEffect(() => {
+    let activo = true;
+    void Promise.all([leerFavoritos(usuarioActivoId), listarVisitas(db, usuarioActivoId)]).then(([favoritosLocales, visitasLocales]) => {
+      if (!activo) return;
+      setFavoritos(favoritosLocales);
+      setVisitas(visitasLocales);
+    });
+    return () => { activo = false; };
+  }, [db, usuarioActivoId]);
+
+  useEffect(() => {
     if (!session || online !== true) return;
+    let activo = true;
     void obtenerTokenSesion().then(async (token) => {
-      if (!token || !apiConfigurada()) return;
+      if (!activo || !token || !apiConfigurada()) return;
       try {
+        await registrarDispositivoPush(token);
         await sincronizarVisitasPendientes(db, session.id, token);
         const remotas = await listarVisitasRemotas(token);
         for (const visita of remotas) await guardarVisita(db, visita);
-        await refreshVisitas();
+        if (activo) await refreshVisitas();
       } catch {
         // Si la API no responde, se conserva la copia local sin interrumpir la navegación.
       }
     });
-  }, [db, online, session]);
+    return () => { activo = false; };
+  }, [db, online, refreshVisitas, session]);
 
   const value = useMemo<AplicacionContextValue>(() => ({
     session, favoritos, visitas, online,
@@ -60,7 +78,7 @@ export function AplicacionProvider({ children }: PropsWithChildren) {
       const existente = favoritos.find((item) => item.lugarId === lugarId);
       const siguiente = existente ? favoritos.filter((item) => item.lugarId !== lugarId) : [...favoritos, { id: `fav-${Date.now()}`, usuarioId: session?.id ?? 'anonimo', lugarId, creadoEn: new Date().toISOString() }];
       setFavoritos(siguiente);
-      await guardarFavoritos(siguiente);
+      await guardarFavoritos(usuarioActivoId, siguiente);
     },
     registrarVisita: async (visita) => {
       await guardarVisita(db, visita);
@@ -81,7 +99,7 @@ export function AplicacionProvider({ children }: PropsWithChildren) {
       setSession(usuario);
     },
     register: async (nombre, email, password) => setSession(await registrarUsuario(nombre, email, password)),
-    logout: async () => { await cerrarSesion(); setSession(null); },
+    logout: async () => { await cerrarSesion(); setFavoritos([]); setVisitas([]); setSession(null); },
     biometricLogin: async () => {
       const autenticada = await autenticarConBiometria();
       if (!autenticada) return false;
@@ -91,7 +109,7 @@ export function AplicacionProvider({ children }: PropsWithChildren) {
       return true;
     },
     refreshVisitas,
-  }), [session, favoritos, visitas, online]);
+  }), [session, favoritos, visitas, online, refreshVisitas, usuarioActivoId]);
 
   return <Contexto.Provider value={value}>{children}</Contexto.Provider>;
 }
