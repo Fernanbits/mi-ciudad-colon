@@ -227,7 +227,7 @@ La verificación no equivale todavía a una batería de pruebas automatizadas. E
 
 - La API puede no tener información completa para todos los campos del PDR.
 - La experiencia offline depende de que el catálogo haya sido guardado previamente.
-- Los MP3 de semilla de la API se inspeccionaron y tenían volumen prácticamente nulo: cargaban como archivo, pero no eran una narración audible. Para no presentar ese recurso como contenido real, el reproductor usa la descripción del lugar mediante `expo-speech` cuando detecta una URL de prueba o cuando el archivo remoto no termina de cargar. Si el backend entrega un audio real, `expo-audio` conserva reproducción, pausa, avance, retroceso y descarga. En el dispositivo de prueba se utiliza la voz `es-US` disponible en Android.
+- Los MP3 de semilla de la API se inspeccionaron y tenían volumen prácticamente nulo: cargaban como archivo, pero no eran una narración audible. Para no presentar ese recurso como contenido real, el reproductor usa la descripción del lugar mediante `expo-speech` cuando detecta una URL de prueba o cuando el archivo remoto no termina de cargar. Si el backend entrega un audio real, `expo-audio` conserva reproducción, pausa, avance, retroceso y descarga. La lectura no fuerza una voz, idioma, velocidad ni tono: respeta la configuración elegida en Android.
 - `npm audit` informa vulnerabilidades moderadas transitivas en `glob` y `minimatch` dentro de herramientas de Expo. La corrección automática propone bajar a Expo 53, por lo que no se aplicó de forma forzada sobre este proyecto SDK 58; se debe volver a revisar cuando Expo publique una actualización compatible.
 - La API ya implementa el registro y envío de notificaciones push, pero el cliente móvil necesita un `expo.extra.eas.projectId` y un development build para probarlas en un dispositivo; Expo Go se mantiene como entorno de recordatorios locales.
 - El cálculo de distancia depende del permiso y de la precisión de ubicación del dispositivo.
@@ -239,7 +239,7 @@ La verificación no equivale todavía a una batería de pruebas automatizadas. E
 1. Completar pruebas manuales en un dispositivo Android y un emulador.
 2. Agregar pruebas unitarias para API, almacenamiento y sincronización.
 3. Probar en Android la carga multipart de fotografías y los límites de tamaño definidos por la API.
-4. Evaluar una voz cloud latinoamericana para producción y mantener `expo-speech` como alternativa offline; en la entrega actual se prioriza la voz `es-US` instalada en el dispositivo.
+4. Evaluar una voz cloud latinoamericana para producción y mantener `expo-speech` como alternativa offline; en la entrega actual se respeta la voz configurada en el dispositivo.
 5. Probar la accesibilidad con TalkBack, tamaño de fuente ampliado y contraste del modo oscuro.
 6. Configurar un build de demostración con EAS.
 7. Reemplazar datos de respaldo por un catálogo administrable cuando exista un backend estable.

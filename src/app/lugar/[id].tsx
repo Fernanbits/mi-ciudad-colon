@@ -1,6 +1,5 @@
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
-import type { Voice } from 'expo-speech';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -61,38 +60,25 @@ export default function LugarDetailScreen() {
   </ScrollView>;
 }
 
-type EstadoVoz = 'buscando' | 'es-us' | 'latinoamerica' | 'sistema';
+type EstadoVoz = 'sistema';
 
 function useVozNarradora() {
-  const [voz, setVoz] = useState<Voice | null>(null);
-  const [estadoVoz, setEstadoVoz] = useState<EstadoVoz>('buscando');
+  const estadoVoz: EstadoVoz = 'sistema';
 
   useEffect(() => {
-    let activa = true;
-    void Speech.getAvailableVoicesAsync().then((voces) => {
-      if (!activa) return;
-      const idioma = (valor: string) => valor.toLowerCase().replace('_', '-');
-      const estadosUnidos = voces.find((item) => idioma(item.language) === 'es-us');
-      const latinoamericana = voces.find((item) => ['es-419', 'es-mx', 'es-cl', 'es-co'].includes(idioma(item.language)));
-      setVoz(estadosUnidos ?? latinoamericana ?? null);
-      setEstadoVoz(estadosUnidos ? 'es-us' : latinoamericana ? 'latinoamerica' : 'sistema');
-    }).catch(() => { if (activa) setEstadoVoz('sistema'); });
-    return () => { activa = false; void Speech.stop(); };
+    return () => { void Speech.stop(); };
   }, []);
 
-  return { voz, estadoVoz };
+  return { estadoVoz };
 }
 
 function descripcionEstadoVoz(estadoVoz: EstadoVoz): string {
-  if (estadoVoz === 'es-us') return 'Voz en español (Estados Unidos)';
-  if (estadoVoz === 'latinoamerica') return 'Voz latinoamericana disponible';
-  if (estadoVoz === 'sistema') return 'Usando la voz en español disponible';
-  return 'Buscando una voz disponible…';
+  return estadoVoz === 'sistema' ? 'Usando la voz configurada en Android' : 'Usando la voz del teléfono';
 }
 
 function AudioControl({ url, lugarId, duracion, texto }: { url: string; lugarId: string; duracion: number; texto: string }) {
   const { colores } = useTema();
-  const { voz, estadoVoz } = useVozNarradora();
+  const { estadoVoz } = useVozNarradora();
   const esUrlDePrueba = url.startsWith('demo://');
   const [source, setSource] = useState(url);
   const [descargada, setDescargada] = useState(false);
@@ -128,10 +114,6 @@ function AudioControl({ url, lugarId, duracion, texto }: { url: string; lugarId:
     setHablando(true);
     setPausada(false);
     Speech.speak(texto, {
-      language: voz?.language ?? 'es-US',
-      voice: voz?.identifier,
-      rate: 0.9,
-      pitch: 1,
       onDone: () => { setHablando(false); setPausada(false); },
       onStopped: () => { setHablando(false); setPausada(false); },
       onError: () => { setHablando(false); setPausada(false); },
@@ -182,7 +164,7 @@ function AudioControl({ url, lugarId, duracion, texto }: { url: string; lugarId:
 
 function SpeechControl({ texto, remotoDisponible }: { texto: string; remotoDisponible: boolean }) {
   const { colores } = useTema();
-  const { voz, estadoVoz } = useVozNarradora();
+  const { estadoVoz } = useVozNarradora();
   const [hablando, setHablando] = useState(false);
 
   const alternarVoz = async () => {
@@ -193,10 +175,6 @@ function SpeechControl({ texto, remotoDisponible }: { texto: string; remotoDispo
     }
     setHablando(true);
     Speech.speak(texto, {
-      language: voz?.language ?? 'es-US',
-      voice: voz?.identifier,
-      rate: 0.9,
-      pitch: 1,
       onDone: () => setHablando(false),
       onStopped: () => setHablando(false),
       onError: () => setHablando(false),
