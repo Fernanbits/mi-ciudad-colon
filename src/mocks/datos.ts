@@ -34,13 +34,13 @@ const imagenesReales = {
   termasColon: ['https://www.turismoentrerios.com/colon/img/termas-colon/18.jpg'],
   playaNorte: ['https://colon.gov.ar/wp-content/uploads/2026/01/WhatsApp-Image-2026-01-06-at-08.12.15.jpeg'],
   parqueElPalmar: ['https://www.argentina.gob.ar/sites/default/files/pn_el_palmar_ecosistema_ph_parquesnacionales.jpg'],
-  piedrasColoradas: ['https://commons.wikimedia.org/wiki/Special:FilePath/Entrada_del_Camping_Piedras_Coloradas.JPG?width=1280'],
+  piedrasColoradas: ['local://fotos-reales/piedras-coloradas.jpg'],
   feriaArtesanos: [
     'https://colon.gov.ar/wp-content/uploads/2026/10/IMG_0086-1-1-scaled.jpg',
     'https://colon.gov.ar/wp-content/uploads/2026/10/IMG_0100-1024x670.jpg',
   ],
   casaCultura: ['https://media.elentrerios.com/colon/fotos/2013/04/10/o_1365612617.jpg'],
-  puertoViejo: ['https://upload.wikimedia.org/wikipedia/commons/0/08/Puerto_viejo%2C_Col%C3%B3n_-_2.jpg'],
+  puertoViejo: ['local://fotos-reales/puerto-viejo.jpg'],
 };
 
 export const lugares: Lugar[] = [

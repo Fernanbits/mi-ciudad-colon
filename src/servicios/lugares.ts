@@ -33,9 +33,8 @@ function esMedioDePrueba(url: string): boolean {
 
 function conservarImagenesCuradas(catalogoRemoto: Lugar[]): Lugar[] {
   const imagenesLocales = new Map<string, string[]>(lugares.map((lugar) => [lugar.id, lugar.imagenes]));
-  imagenesLocales.set('lug-003', [
-    'https://commons.wikimedia.org/wiki/Special:FilePath/Entrada_del_Camping_Piedras_Coloradas.JPG?width=1280',
-  ]);
+  imagenesLocales.set('lug-003', ['local://fotos-reales/piedras-coloradas.jpg']);
+  imagenesLocales.set('lug-007', ['local://fotos-reales/puerto-viejo.jpg']);
   imagenesLocales.set('lug-014', [
     'https://colon.gov.ar/wp-content/uploads/2023/09/OBRA-COSTANERA-balaustres-1-9-2023-2-scaled.jpg',
   ]);

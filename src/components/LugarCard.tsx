@@ -11,9 +11,15 @@ type LugarImagenProps = {
   resizeMode?: ImageResizeMode;
 };
 
+const FOTOS_LOCALES: Record<string, number> = {
+  'local://fotos-reales/puerto-viejo.jpg': require('../../assets/fotos-reales/puerto-viejo.jpg'),
+  'local://fotos-reales/piedras-coloradas.jpg': require('../../assets/fotos-reales/piedras-coloradas.jpg'),
+};
+
 export function LugarImagen({ uri, nombre, categoria, style, resizeMode = 'cover' }: LugarImagenProps) {
   const { colores } = useTema();
   const uriValida = Boolean(uri?.trim());
+  const fuenteLocal = uri ? FOTOS_LOCALES[uri] : undefined;
   const [estado, setEstado] = useState<'cargando' | 'lista' | 'fallida'>(uriValida ? 'cargando' : 'fallida');
 
   useEffect(() => {
@@ -32,7 +38,7 @@ export function LugarImagen({ uri, nombre, categoria, style, resizeMode = 'cover
 
   return (
     <View style={[styles.mediaWrapper, style as StyleProp<ViewStyle>]} accessible accessibilityRole="image" accessibilityLabel={estado === 'cargando' ? `Cargando imagen de ${nombre}` : `Imagen de ${nombre}`}>
-      <Image source={{ uri: uri!.trim() }} style={styles.imageFill} resizeMode={resizeMode} onLoad={() => setEstado('lista')} onError={() => setEstado('fallida')} accessible={false} />
+      <Image source={fuenteLocal ?? { uri: uri!.trim() }} style={styles.imageFill} resizeMode={resizeMode} onLoad={() => setEstado('lista')} onError={() => setEstado('fallida')} accessible={false} />
       {estado === 'cargando' && <View style={[styles.loadingOverlay, { backgroundColor: colores.superficieSuave }]}><ActivityIndicator color={colores.verde} /></View>}
     </View>
   );
