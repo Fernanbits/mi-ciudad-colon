@@ -6,12 +6,15 @@ import { listarEventos } from '../../servicios/eventos';
 import { cancelarRecordatorio, programarRecordatorio } from '../../servicios/notificaciones';
 import { Evento } from '../../tipos/modelos';
 import { EstadoView } from '../../components/EstadoView';
+import { useAplicacion } from '../../contexto/AplicacionContext';
 import { useTema } from '../../contexto/TemaContext';
 
 const estadoTexto: Record<Evento['estado'], string> = { programado: 'Programado', suspendido: 'Suspendido', cancelado: 'Cancelado', finalizado: 'Finalizado' };
 
 export default function AgendaScreen() {
   const { colores } = useTema();
+  const { session } = useAplicacion();
+  const usuarioActivoId = session?.id ?? 'anonimo';
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [guardados, setGuardados] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +24,7 @@ export default function AgendaScreen() {
     try {
       setLoading(true);
       setError(null);
-      const [items, ids] = await Promise.all([listarEventos(), leerEventosGuardados()]);
+      const [items, ids] = await Promise.all([listarEventos(), leerEventosGuardados(usuarioActivoId)]);
       setEventos(items);
       setGuardados(ids);
     } catch {
@@ -31,7 +34,7 @@ export default function AgendaScreen() {
     }
   };
 
-  useEffect(() => { void cargar(); }, []);
+  useEffect(() => { void cargar(); }, [usuarioActivoId]);
 
   const visibles = useMemo(() => eventos.filter((evento) => evento.estado !== 'finalizado').sort((a, b) => a.inicio.localeCompare(b.inicio)), [eventos]);
 
@@ -40,17 +43,17 @@ export default function AgendaScreen() {
     const estaGuardado = guardados.includes(evento.id);
     if (estaGuardado) {
       const siguiente = guardados.filter((id) => id !== evento.id);
-      setGuardados(siguiente); await guardarEventosGuardados(siguiente);
-      const notificationId = await quitarNotificacionEvento(evento.id);
+      setGuardados(siguiente); await guardarEventosGuardados(usuarioActivoId, siguiente);
+      const notificationId = await quitarNotificacionEvento(usuarioActivoId, evento.id);
       if (notificationId) await cancelarRecordatorio(notificationId);
       Alert.alert('Recordatorio quitado', 'No recibirás el aviso de este evento.');
       return;
     }
     const fechaAviso = new Date(new Date(evento.inicio).getTime() - 60 * 60 * 1000);
     const id = await programarRecordatorio(evento.titulo, fechaAviso);
-    if (id) await guardarNotificacionEvento(evento.id, id);
+    if (id) await guardarNotificacionEvento(usuarioActivoId, evento.id, id);
     const siguiente = [...guardados, evento.id];
-    setGuardados(siguiente); await guardarEventosGuardados(siguiente);
+    setGuardados(siguiente); await guardarEventosGuardados(usuarioActivoId, siguiente);
     Alert.alert(id ? 'Evento guardado' : 'Evento guardado en el teléfono', id ? 'Te avisaremos una hora antes.' : 'Las notificaciones están desactivadas, pero el evento quedó en tu agenda.');
   };
 

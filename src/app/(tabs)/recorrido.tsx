@@ -11,6 +11,7 @@ import { Categoria, Lugar, Visita } from '../../tipos/modelos';
 import { useAplicacion } from '../../contexto/AplicacionContext';
 import { EstadoView } from '../../components/EstadoView';
 import { useTema } from '../../contexto/TemaContext';
+import { generarId } from '../../utilidades/ids';
 
 export default function RecorridoScreen() {
   const { visitas, session, registrarVisita } = useAplicacion();
@@ -74,7 +75,7 @@ export default function RecorridoScreen() {
   const registrar = async (origen: Visita['origen'], elegido = lugarId) => {
     const lugar = lugares.find((item) => item.id === elegido);
     if (!lugar) { Alert.alert('Elegí un lugar', 'Seleccioná dónde estás para guardar la visita.'); return; }
-    const id = `vis-${Date.now()}`;
+    const id = generarId('vis');
     const fotoUri = foto ? await guardarFotoVisita(foto, id).catch(() => foto) : null;
     const visita: Visita = { id, usuarioId: session?.id ?? 'anonimo', lugarId: lugar.id, fechaHora: new Date().toISOString(), origen, fotoUri, nota: nota.trim() || null, sincronizada: false };
     await registrarVisita(visita); setNota(''); setFoto(null);

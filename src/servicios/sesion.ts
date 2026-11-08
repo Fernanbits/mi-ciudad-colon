@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { usuarioDemo } from '../mocks/datos';
 import { Usuario } from '../tipos/modelos';
 import { apiConfigurada, pedirApi, RespuestaUnoApi, SesionApi } from './api';
+import { parsearObjetoJsonSeguro } from '../almacenamiento/seguro';
 
 const CLAVE_TOKEN = 'mi-ciudad.session.token';
 const CLAVE_USUARIO = 'mi-ciudad.session.user';
@@ -53,7 +54,12 @@ export async function recuperarSesion(): Promise<Usuario | null> {
   const token = await SecureStore.getItemAsync(CLAVE_TOKEN);
   const usuario = await SecureStore.getItemAsync(CLAVE_USUARIO);
   if (!token || !usuario) return null;
-  return JSON.parse(usuario) as Usuario;
+  const datos = parsearObjetoJsonSeguro<Usuario>(usuario);
+  if (!datos || typeof datos.id !== 'string' || typeof datos.email !== 'string') {
+    await cerrarSesion();
+    return null;
+  }
+  return datos;
 }
 
 export async function cerrarSesion(): Promise<void> {

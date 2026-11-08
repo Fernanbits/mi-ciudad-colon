@@ -155,6 +155,39 @@ Acciones transversales:
 
 Dentro de **Mi recorrido**, la acción principal aparece primero: la persona puede escanear un QR, usar su ubicación o iniciar un registro manual. Después puede completar el lugar, la fotografía y la nota; al final consulta el pasaporte, los sellos y el historial. Este orden prioriza la tarea que motivó la entrada a la pantalla y deja la gamificación como refuerzo.
 
+### Sistema de códigos QR
+
+El QR funciona como una identificación simple del atractivo. En esta entrega académica el contenido del código usa el formato `COLON:lug-XXX`, por ejemplo `COLON:lug-003` para Balneario Piedras Coloradas.
+
+El flujo de lectura es:
+
+1. La persona entra a **Mi recorrido** o al detalle de un lugar y toca **Escanear QR**.
+2. La app solicita el permiso de cámara sólo en ese momento.
+3. `expo-camera` detecta únicamente códigos QR.
+4. El valor leído se consulta con `obtenerLugarPorQr`.
+5. Si no existe o está inactivo, se muestra **QR no reconocido** y no se crea una visita.
+6. Si el lector se abrió desde un detalle, se compara el lugar esperado con el lugar del QR.
+7. Si coincide, se guarda una visita con origen `qr`, fecha y usuario local.
+8. La visita se conserva primero en SQLite y queda pendiente de sincronización si no hay red.
+
+Los códigos de prueba se encuentran en `assets/qr-prueba/` y se presentan juntos en [QR_PRUEBAS.html](QR_PRUEBAS.html). La plancha contiene los siguientes casos:
+
+| Código | Lugar | Uso en QA |
+|---|---|---|
+| `COLON:lug-001` | Termas de Colón | QR válido |
+| `COLON:lug-002` | Playa Norte | QR válido y prueba de lugar equivocado |
+| `COLON:lug-003` | Balneario Piedras Coloradas | QR válido |
+| `COLON:lug-004` | Molino Forclaz | QR válido con audioguía TTS |
+| `COLON:lug-005` | Museo Casa de la Cultura | QR válido |
+| `COLON:lug-006` | Parque Nacional El Palmar | QR válido para probar modo offline |
+| `COLON:lug-007` | Puerto Viejo | QR válido con foto local |
+| `COLON:lug-010` | Paseo de Artesanos | QR válido |
+| `COLON:qr-invalido` | Ninguno | Rechazo esperado |
+
+Para una prueba manual, abrir la plancha desde la PC o imprimirla, iniciar la app en Expo Go, entrar a **Mi recorrido**, tocar **Escanear QR** y apuntar al código. Para probar la validación de correspondencia, abrir primero el detalle de Piedras Coloradas y escanear el QR de Playa Norte: la app debe informar que no corresponde y no registrar la visita.
+
+La plancha no reemplaza los códigos que debería colocar cada atractivo en una instalación real. En una versión productiva, los códigos deberían generarse y administrarse desde el backend, y convendría agregar una firma o token para evitar que una copia del texto permita registrar visitas fuera del lugar.
+
 ## 7. Integración con la API
 
 La URL se obtiene desde `EXPO_PUBLIC_API_URL`. La capa `src/servicios/api.ts` centraliza:

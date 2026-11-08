@@ -60,6 +60,24 @@ Cuando existe `EXPO_PUBLIC_API_URL` en un archivo `.env`, la app consulta la API
 
 Si no se configura la API o el servidor no responde, se utiliza el catálogo local de respaldo. Esta decisión permite presentar el recorrido principal sin que una caída de red deje la app completamente vacía.
 
+## Sistema de códigos QR
+
+Mi Ciudad usa códigos QR para registrar visitas turísticas. Cada código contiene el identificador del lugar con el formato `COLON:lug-XXX`. Al escanearlo, la app:
+
+1. valida el código contra la API o el catálogo local;
+2. rechaza códigos que no pertenecen a Mi Ciudad;
+3. verifica que el QR corresponda al lugar esperado cuando se abre el lector desde un detalle;
+4. guarda la visita primero en SQLite;
+5. la sincroniza con la API cuando vuelve la conexión.
+
+Los códigos de prueba están en [QR_PRUEBAS.html](QR_PRUEBAS.html) y en `assets/qr-prueba/`. La plancha incluye ocho códigos válidos y uno inválido para comprobar el rechazo del lector. Para regenerarlos se puede ejecutar:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\generar-qrs.ps1"
+```
+
+El lector necesita permiso de cámara. Si el permiso se rechaza, se puede continuar con el registro manual o por ubicación.
+
 Para activar la API de forma local:
 
 ```powershell

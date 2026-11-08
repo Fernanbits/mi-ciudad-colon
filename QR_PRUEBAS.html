@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QR de prueba — Mi Ciudad Colón</title>
+  <style>
+    body { margin: 0; background: #f7f4ee; color: #193746; font-family: Segoe UI, Arial, sans-serif; }
+    main { max-width: 1000px; margin: 0 auto; padding: 28px; }
+    h1 { color: #0e5a74; margin-bottom: 6px; }
+    .intro { margin-top: 0; color: #547180; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+    .card { background: white; border: 1px solid #dfd5c6; border-radius: 18px; padding: 16px; text-align: center; break-inside: avoid; }
+    .card img { width: 100%; max-width: 220px; image-rendering: auto; }
+    .card h2 { color: #0e5a74; font-size: 18px; margin: 8px 0 2px; }
+    .code { color: #6c8c4a; font-family: Consolas, monospace; font-weight: 700; }
+    .invalid { border-color: #b86b5c; }
+    .invalid h2 { color: #9b4e3e; }
+    @media print { body { background: white; } main { max-width: none; } .grid { grid-template-columns: repeat(3, 1fr); } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>QR de prueba — Mi Ciudad Colón</h1>
+    <p class="intro">Imprimir o mostrar desde otra pantalla para validar el lector QR. Los códigos contienen exactamente los valores del catálogo local.</p>
+    <section class="grid">
+      <article class="card"><img src="assets/qr-prueba/qr-lug-001.png" alt="QR Termas de Colón"><h2>Termas de Colón</h2><div class="code">COLON:lug-001</div></article>
+      <article class="card"><img src="assets/qr-prueba/qr-lug-002.png" alt="QR Playa Norte"><h2>Playa Norte</h2><div class="code">COLON:lug-002</div></article>
+      <article class="card"><img src="assets/qr-prueba/qr-lug-003.png" alt="QR Piedras Coloradas"><h2>Piedras Coloradas</h2><div class="code">COLON:lug-003</div></article>
+      <article class="card"><img src="assets/qr-prueba/qr-lug-004.png" alt="QR Molino Forclaz"><h2>Molino Forclaz</h2><div class="code">COLON:lug-004</div></article>
+      <article class="card"><img src="assets/qr-prueba/qr-lug-005.png" alt="QR Museo Casa de la Cultura"><h2>Museo Casa de la Cultura</h2><div class="code">COLON:lug-005</div></article>
+      <article class="card"><img src="assets/qr-prueba/qr-lug-006.png" alt="QR Parque Nacional El Palmar"><h2>Parque Nacional El Palmar</h2><div class="code">COLON:lug-006</div></article>
+      <article class="card"><img src="assets/qr-prueba/qr-lug-007.png" alt="QR Puerto Viejo"><h2>Puerto Viejo</h2><div class="code">COLON:lug-007</div></article>
+      <article class="card"><img src="assets/qr-prueba/qr-lug-010.png" alt="QR Paseo de Artesanos"><h2>Paseo de Artesanos</h2><div class="code">COLON:lug-010</div></article>
+      <article class="card invalid"><img src="assets/qr-prueba/qr-invalido.png" alt="QR inválido"><h2>Prueba inválida</h2><div class="code">COLON:qr-invalido</div></article>
+    </section>
+  </main>
+</body>
+</html>

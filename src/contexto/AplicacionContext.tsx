@@ -8,6 +8,7 @@ import { autenticarConBiometria, cerrarSesion, iniciarSesion, obtenerTokenSesion
 import { apiConfigurada } from '../servicios/api';
 import { listarVisitasRemotas, sincronizarVisitasPendientes } from '../servicios/visitas';
 import { registrarDispositivoPush } from '../servicios/notificaciones';
+import { generarId } from '../utilidades/ids';
 
 interface AplicacionContextValue {
   session: Usuario | null;
@@ -76,7 +77,7 @@ export function AplicacionProvider({ children }: PropsWithChildren) {
     session, favoritos, visitas, online,
     toggleFavorito: async (lugarId) => {
       const existente = favoritos.find((item) => item.lugarId === lugarId);
-      const siguiente = existente ? favoritos.filter((item) => item.lugarId !== lugarId) : [...favoritos, { id: `fav-${Date.now()}`, usuarioId: session?.id ?? 'anonimo', lugarId, creadoEn: new Date().toISOString() }];
+      const siguiente = existente ? favoritos.filter((item) => item.lugarId !== lugarId) : [...favoritos, { id: generarId('fav'), usuarioId: session?.id ?? 'anonimo', lugarId, creadoEn: new Date().toISOString() }];
       setFavoritos(siguiente);
       await guardarFavoritos(usuarioActivoId, siguiente);
     },

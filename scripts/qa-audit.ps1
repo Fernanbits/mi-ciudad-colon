@@ -22,7 +22,11 @@ function Invoke-QACheck {
   $exitCode = $LASTEXITCODE
 
   if ($exitCode -eq 0) {
-    Write-Host ("PASS: " + $Name) -ForegroundColor Green
+    if ($ExpectedLevel -eq 'WARN') {
+      Write-Host ("PASS: " + $Name + ". Revisar igualmente las vulnerabilidades Moderate informadas por npm.") -ForegroundColor Yellow
+    } else {
+      Write-Host ("PASS: " + $Name) -ForegroundColor Green
+    }
     $results.Add([pscustomobject]@{ Nombre = $Name; Estado = 'PASS'; Codigo = $exitCode })
     return
   }
@@ -39,7 +43,7 @@ Write-Host ("Fecha: " + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'))
 
 Invoke-QACheck -Name 'TypeScript' -Command 'npm.cmd' -Arguments @('run', 'typecheck')
 Invoke-QACheck -Name 'Expo Doctor' -Command 'npx.cmd' -Arguments @('expo-doctor')
-Invoke-QACheck -Name 'Dependencias sin vulnerabilidades High/Critical' -Command 'npm.cmd' -Arguments @('audit', '--omit=dev', '--audit-level=high') -ExpectedLevel 'WARN'
+Invoke-QACheck -Name 'Auditoria de dependencias (umbral High/Critical)' -Command 'npm.cmd' -Arguments @('audit', '--omit=dev', '--audit-level=high') -ExpectedLevel 'WARN'
 
 $adbCommand = Get-Command adb.exe -ErrorAction SilentlyContinue
 if ($null -eq $adbCommand) {

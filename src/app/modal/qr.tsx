@@ -6,6 +6,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { obtenerLugar, obtenerLugarPorQr } from '../../servicios/lugares';
 import { useAplicacion } from '../../contexto/AplicacionContext';
 import { useTema } from '../../contexto/TemaContext';
+import { generarId } from '../../utilidades/ids';
 
 export default function QrScreen() {
   const [permission, requestPermission] = useCameraPermissions(); const [scanned, setScanned] = useState(false); const { lugarId } = useLocalSearchParams<{ lugarId?: string }>(); const { session, registrarVisita } = useAplicacion(); const { colores } = useTema();
@@ -25,7 +26,7 @@ export default function QrScreen() {
         Alert.alert('QR no corresponde', `Este código pertenece a “${lugarEscaneado.nombre}”, no a “${lugarEsperado.nombre}”.`, [{ text: 'Intentar de nuevo', onPress: () => setScanned(false) }]);
         return;
       }
-      await registrarVisita({ id: `vis-${Date.now()}`, usuarioId: session?.id ?? 'anonimo', lugarId: lugarEscaneado.id, fechaHora: new Date().toISOString(), origen: 'qr', fotoUri: null, nota: null, sincronizada: false });
+      await registrarVisita({ id: generarId('vis'), usuarioId: session?.id ?? 'anonimo', lugarId: lugarEscaneado.id, fechaHora: new Date().toISOString(), origen: 'qr', fotoUri: null, nota: null, sincronizada: false });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Visita registrada', lugarEscaneado.nombre, [{ text: 'Continuar', onPress: () => router.back() }]);
     } catch {

@@ -41,6 +41,7 @@ export async function pedirPermisoNotificaciones(): Promise<boolean> {
 export async function programarRecordatorio(titulo: string, fecha: Date): Promise<string | null> {
   const Notifications = await cargarModuloNotificaciones();
   if (!Notifications) return null;
+  if (!Number.isFinite(fecha.getTime()) || fecha.getTime() <= Date.now()) return null;
   if (!(await pedirPermisoNotificaciones())) return null;
   return Notifications.scheduleNotificationAsync({
     content: { title: 'Mi Ciudad', body: titulo, data: { tipo: 'evento' } },
