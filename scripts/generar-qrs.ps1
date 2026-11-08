@@ -8,7 +8,7 @@ Set-Location -LiteralPath $projectRoot
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 
 $items = @(
-  @{ Archivo = 'qr-lug-001.png'; Codigo = 'COLON:lug-001'; Nombre = 'Termas de Colón'; Clase = '' },
+  @{ Archivo = 'qr-lug-001.png'; Codigo = 'COLON:lug-001'; Nombre = 'Termas de Col&oacute;n'; Clase = '' },
   @{ Archivo = 'qr-lug-002.png'; Codigo = 'COLON:lug-002'; Nombre = 'Playa Norte'; Clase = '' },
   @{ Archivo = 'qr-lug-003.png'; Codigo = 'COLON:lug-003'; Nombre = 'Piedras Coloradas'; Clase = '' },
   @{ Archivo = 'qr-lug-004.png'; Codigo = 'COLON:lug-004'; Nombre = 'Molino Forclaz'; Clase = '' },
@@ -16,7 +16,7 @@ $items = @(
   @{ Archivo = 'qr-lug-006.png'; Codigo = 'COLON:lug-006'; Nombre = 'Parque Nacional El Palmar'; Clase = '' },
   @{ Archivo = 'qr-lug-007.png'; Codigo = 'COLON:lug-007'; Nombre = 'Puerto Viejo'; Clase = '' },
   @{ Archivo = 'qr-lug-010.png'; Codigo = 'COLON:lug-010'; Nombre = 'Paseo de Artesanos'; Clase = '' },
-  @{ Archivo = 'qr-invalido.png'; Codigo = 'COLON:qr-invalido'; Nombre = 'Prueba inválida'; Clase = 'invalid' }
+  @{ Archivo = 'qr-invalido.png'; Codigo = 'COLON:qr-invalido'; Nombre = 'Prueba inv&aacute;lida'; Clase = 'invalid' }
 )
 
 foreach ($item in $items) {
@@ -41,7 +41,7 @@ $html = @"
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>QR de prueba — Mi Ciudad Colón</title>
+  <title>QR de prueba &mdash; Mi Ciudad Col&oacute;n</title>
   <style>
     body { margin: 0; background: #f7f4ee; color: #193746; font-family: Segoe UI, Arial, sans-serif; }
     main { max-width: 1000px; margin: 0 auto; padding: 28px; }
@@ -59,8 +59,8 @@ $html = @"
 </head>
 <body>
   <main>
-    <h1>QR de prueba — Mi Ciudad Colón</h1>
-    <p class="intro">Imprimir o mostrar desde otra pantalla para validar el lector QR. Los códigos contienen exactamente los valores del catálogo local.</p>
+    <h1>QR de prueba &mdash; Mi Ciudad Col&oacute;n</h1>
+    <p class="intro">Imprimir o mostrar desde otra pantalla para validar el lector QR. Los c&oacute;digos contienen exactamente los valores del cat&aacute;logo local.</p>
     <section class="grid">
 $($cards -join "`n")
     </section>
