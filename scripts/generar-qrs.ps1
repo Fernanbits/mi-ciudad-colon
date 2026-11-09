@@ -10,7 +10,7 @@ New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
 $items = @(
   @{ Archivo = 'qr-lug-001.png'; Codigo = 'COLON:lug-001'; Nombre = 'Termas de Col&oacute;n'; Clase = '' },
   @{ Archivo = 'qr-lug-002.png'; Codigo = 'COLON:lug-002'; Nombre = 'Playa Norte'; Clase = '' },
-  @{ Archivo = 'qr-lug-003.png'; Codigo = 'COLON:lug-003'; Nombre = 'Piedras Coloradas'; Clase = '' },
+  @{ Archivo = 'qr-lug-003.png'; Codigo = 'COLON:lug-003'; Nombre = 'Balneario Piedras Coloradas'; Clase = '' },
   @{ Archivo = 'qr-lug-004.png'; Codigo = 'COLON:lug-004'; Nombre = 'Molino Forclaz'; Clase = '' },
   @{ Archivo = 'qr-lug-005.png'; Codigo = 'COLON:lug-005'; Nombre = 'Museo Casa de la Cultura'; Clase = '' },
   @{ Archivo = 'qr-lug-006.png'; Codigo = 'COLON:lug-006'; Nombre = 'Parque Nacional El Palmar'; Clase = '' },
