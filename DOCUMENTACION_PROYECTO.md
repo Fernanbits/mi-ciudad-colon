@@ -4,7 +4,7 @@
   <img src="assets/icon-mi-ciudad.png" alt="Ícono de Mi Ciudad Colón" width="160">
 </p>
 
-**Versión:** 1.0.0  
+**Versión:** 1.0.2<br>
 **Tipo:** MVP académico para dispositivos móviles  
 **Ciudad:** Colón, Entre Ríos, Argentina  
 **Tecnología principal:** React Native con Expo y TypeScript
@@ -15,7 +15,7 @@
 
 - Gustavo Minchiotti
 - Francisco López
-- Alicia Montenegro
+- Alicia Montenegro (Viviana)
 - Jimena Fernández
 
 ## 1. Presentación
@@ -46,7 +46,7 @@ La aplicación propone una entrada más simple:
 - Agenda de eventos.
 - Recorrido personal a partir de lugares seleccionados.
 - Pasaporte turístico visual con progreso, sellos por lugar e insignias.
-- Favoritos persistentes.
+- Favoritos persistentes y sincronización por cuenta, con altas y bajas pendientes durante el modo offline.
 - Registro de visitas por QR, ubicación o carga manual.
 - Nota y fotografía asociadas a una visita. La fotografía se conserva localmente y se sube al backend durante la sincronización cuando hay sesión y conexión.
 - Mapa y cálculo de distancia cuando el dispositivo entrega ubicación.
@@ -62,7 +62,7 @@ La aplicación propone una entrada más simple:
 - Moderación de fotografías y comentarios.
 - Pagos, reservas o venta de entradas.
 - Chat con prestadores turísticos.
-- Configuración de notificaciones push remotas en producción: la API está preparada, pero el móvil necesita un development build con credenciales de Expo.
+- Certificación de notificaciones push remotas en producción. La API y el registro del dispositivo están implementados; el envío remoto completo necesita una prueba específica en la APK con credenciales válidas. Un recordatorio local no acredita ese flujo.
 - Pruebas automatizadas completas.
 
 Dejar estas tareas explícitamente fuera del MVP ayuda a no confundir una demostración académica con un producto terminado.
@@ -195,7 +195,7 @@ La URL se obtiene desde `EXPO_PUBLIC_API_URL`. La capa `src/servicios/api.ts` ce
 - construcción de URLs;
 - encabezado `Authorization: Bearer` cuando hay sesión;
 - serialización JSON;
-- timeout de ocho segundos;
+- timeout general de ocho segundos y treinta segundos para ingreso y registro, para contemplar el arranque de la API;
 - conversión de respuestas no exitosas a `ApiHttpError`.
 
 La app intenta usar datos remotos cuando la API está configurada. Si esa consulta falla, los servicios pueden recuperar el catálogo local de respaldo. La visita tiene un tratamiento diferente: primero se guarda en el teléfono y luego se intenta sincronizar con `POST /yo/visitas`.
@@ -209,6 +209,20 @@ La sincronización actual funciona de esta manera:
 
 Las fotografías elegidas desde el dispositivo se conservan localmente junto con la visita. Cuando existe una sesión y vuelve la conexión, la app las sube a `POST /archivos`, guarda la URL devuelta y recién después envía la visita a `POST /yo/visitas`. Si la subida o el envío falla, la visita permanece pendiente para reintentarla.
 
+### Favoritos y recuperación de cuenta
+
+Los favoritos se guardan en `expo-sqlite/kv-store` junto con sus cambios pendientes, en una clave separada por usuario. Se conservan tanto las incorporaciones como las eliminaciones: de lo contrario, un favorito quitado sin conexión podría reaparecer al consultar el servidor.
+
+Cada cambio tiene un identificador. Al finalizar un pedido se confirma ese cambio concreto, para no borrar un toque más reciente sobre el mismo lugar. La sincronización usa `PUT` y `DELETE /yo/favoritos/:lugarId` y luego recupera todas las páginas de favoritos. Los cambios locales todavía pendientes tienen prioridad sobre una lectura remota atrasada.
+
+La app intenta sincronizar al ingresar, recuperar conectividad y volver a primer plano. También ofrece **Yo → Sincronizar cuenta**, con estado de envío, errores y hora de la última sincronización correcta de esa sesión. Las visitas y los favoritos de otras cuentas no se muestran, y los registros anónimos no se trasladan automáticamente a una cuenta.
+
+### Despliegue de demostración
+
+La API está desplegada en Cloud Run. Usa PostgreSQL de Supabase y un bucket de Supabase Storage para las fotografías. La APK usa una URL HTTPS pública configurada en el entorno `preview` de EAS. No necesita compartir Wi-Fi con la computadora. Las credenciales de base y Storage permanecen en el servidor.
+
+Cloud Run puede tardar al recibir el primer pedido después de un período sin uso. La instancia mínima es cero y la máxima es una para acotar el despliegue académico.
+
 ## 8. Permisos y privacidad
 
 La aplicación puede solicitar:
@@ -216,7 +230,7 @@ La aplicación puede solicitar:
 - **Ubicación:** mostrar lugares cercanos y calcular distancias.
 - **Cámara:** leer códigos QR y registrar una visita.
 - **Galería:** asociar una fotografía a un recuerdo.
-- **Notificaciones:** recordatorios locales para eventos; el registro de tokens push queda preparado para un development build con EAS.
+- **Notificaciones:** recordatorios locales para eventos y registro del token del dispositivo cuando el entorno y las credenciales permiten push remotas.
 - **Biometría:** facilitar el reingreso al dispositivo.
 
 La aplicación incluye modo claro, modo oscuro y modo sistema. La preferencia se guarda localmente y se aplican colores de superficie, texto, bordes y acciones con contraste diferenciado para cada tema.
@@ -254,15 +268,17 @@ npx expo export --platform android
 
 También se probó el flujo de apertura con Expo Go en Android, la carga del catálogo, el uso de imágenes reales, la navegación principal, la colección visual del pasaporte y la persistencia local.
 
-La verificación no equivale todavía a una batería de pruebas automatizadas. En una etapa posterior sería conveniente agregar pruebas unitarias para servicios y pruebas de recorrido para login, favoritos, registro de visitas y sincronización.
+En el cierre se ejecutaron 19 casos automatizados sobre los servicios reales del cliente, con red controlada y SQLite de escritorio: cola offline, eliminaciones, toques rápidos, paginación, aislamiento de cuentas y reintentos. Además se aprobaron 30 comprobaciones HTTPS contra la API publicada, con cuentas temporales y limpieza posterior. Estas pruebas no sustituyen SecureStore, permisos, audio ni interfaz en un teléfono real.
+
+La APK 1.0.2 se instaló sobre la anterior en un Pova 6 sin borrar datos. Se verificaron la firma, el paquete y la URL pública incluida. En el equipo se comprobó que los títulos y las pestañas respetan las barras de Android. La audioguía descargada de Molino Forclaz conservó el estado «Sin señal» tras cerrar y abrir la app; con modo avión activo, el reproductor avanzó usando el archivo local. La reproducción audible del MP3 ya se había confirmado en la versión 1.0.1. Al terminar la prueba se restauraron Wi-Fi y datos móviles. Aún falta comprobar la sincronización de una cuenta entre dos teléfonos, los tamaños de texto ampliados y TalkBack.
 
 ## 11. Limitaciones conocidas
 
 - La API puede no tener información completa para todos los campos del PDR.
 - La experiencia offline depende de que el catálogo haya sido guardado previamente.
-- Los MP3 de semilla de la API se inspeccionaron y tenían volumen prácticamente nulo: cargaban como archivo, pero no eran una narración audible. Para no presentar ese recurso como contenido real, el reproductor usa la descripción del lugar mediante `expo-speech` cuando detecta una URL de prueba o cuando el archivo remoto no termina de cargar. Si el backend entrega un audio real, `expo-audio` conserva reproducción, pausa, avance, retroceso y descarga. La lectura no fuerza una voz, idioma, velocidad ni tono: respeta la configuración elegida en Android.
-- `npm audit` informa vulnerabilidades moderadas transitivas en `glob` y `minimatch` dentro de herramientas de Expo. La corrección automática propone bajar a Expo 53, por lo que no se aplicó de forma forzada sobre este proyecto SDK 58; se debe volver a revisar cuando Expo publique una actualización compatible.
-- La API ya implementa el registro y envío de notificaciones push, pero el cliente móvil necesita un `expo.extra.eas.projectId` y un development build para probarlas en un dispositivo; Expo Go se mantiene como entorno de recordatorios locales.
+- Se reemplazaron ocho MP3 de semilla por narraciones de las descripciones actuales, generadas una vez con Google Cloud Text-to-Speech y la voz `es-US-Standard-A`. Los archivos se guardan en Supabase y la API informa sus duraciones reales. Escucharlos no vuelve a invocar el servicio de síntesis. `expo-audio` ofrece reproducción, pausa, avance, retroceso y descarga; al reabrir un lugar se busca el archivo en documentos. La lectura alternativa con `expo-speech` respeta la voz del teléfono. Esa voz puede requerir datos descargados en Android para funcionar sin conexión.
+- La auditoría del 10/11/2026 informa siete vulnerabilidades moderadas y ninguna alta o crítica. Los avisos alcanzan dependencias de las herramientas de Expo: `glob`, `minimatch` y `uuid`, este último a través de `@expo/ngrok`. No se aplicó una corrección forzada ni se cambió SDK 58; queda pendiente actualizar esas herramientas con versiones compatibles.
+- El proyecto ya está vinculado con EAS y dispone de APK de demostración. Expo Go mantiene limitaciones para push remotas; la recepción de mensajes enviados por el servidor debe verificarse específicamente en la APK.
 - El cálculo de distancia depende del permiso y de la precisión de ubicación del dispositivo.
 - El proyecto se verificó principalmente en Android; iOS requiere una pasada específica.
 - La interfaz incorpora etiquetas para lectores de pantalla, roles en acciones y selectores, textos alternativos para imágenes, áreas táctiles claras y modo oscuro. Todavía falta una prueba manual completa con TalkBack, tamaños de fuente del sistema y distintos teléfonos.
@@ -272,9 +288,9 @@ La verificación no equivale todavía a una batería de pruebas automatizadas. E
 1. Completar pruebas manuales en un dispositivo Android y un emulador.
 2. Agregar pruebas unitarias para API, almacenamiento y sincronización.
 3. Probar en Android la carga multipart de fotografías y los límites de tamaño definidos por la API.
-4. Evaluar una voz cloud latinoamericana para producción y mantener `expo-speech` como alternativa offline; en la entrega actual se respeta la voz configurada en el dispositivo.
+4. Revisar editorialmente las narraciones y probar su descarga en los teléfonos. Los lugares sin MP3 conservan la lectura de la descripción con la voz configurada en el dispositivo.
 5. Probar la accesibilidad con TalkBack, tamaño de fuente ampliado y contraste del modo oscuro.
-6. Configurar un build de demostración con EAS.
+6. Instalar y validar la nueva APK 1.0.2 en los teléfonos del equipo antes de grabar.
 7. Reemplazar datos de respaldo por un catálogo administrable cuando exista un backend estable.
 
 ## 13. Criterio de cierre del MVP

@@ -43,13 +43,42 @@ export async function sincronizarVisitasPendientes(
       await guardarVisita(db, { ...preparada, ...remota, sincronizada: true });
       sincronizadas += 1;
     } catch {
-      // La cola queda local para reintentar cuando vuelva la red o se abra la app.
+      // Conservar la visita pendiente para reintentar.
     }
   }
   return sincronizadas;
 }
 
 export async function listarVisitasRemotas(token: string): Promise<Visita[]> {
-  const respuesta = await pedirApi<RespuestaListaApi<Visita>>('/yo/visitas?porPagina=500', { token });
-  return respuesta.datos.map((visita) => ({ ...visita, sincronizada: true }));
+  const visitas: Visita[] = [];
+  let pagina = 1;
+  while (true) {
+    const respuesta = await pedirApi<RespuestaListaApi<Visita>>(`/yo/visitas?pagina=${pagina}&porPagina=100`, { token });
+    visitas.push(...respuesta.datos.map((visita) => ({ ...visita, sincronizada: true })));
+    if (visitas.length >= respuesta.meta.total || respuesta.datos.length === 0) return visitas;
+    pagina += 1;
+  }
+}
+
+const sincronizaciones = new Map<string, Promise<void>>();
+
+export async function sincronizarVisitasCuenta(db: SQLiteDatabase, usuarioId: string, token: string): Promise<void> {
+  const existente = sincronizaciones.get(usuarioId);
+  if (existente) return existente;
+  const tarea = (async () => {
+    await sincronizarVisitasPendientes(db, usuarioId, token);
+    const remotas = await listarVisitasRemotas(token);
+    const locales = await listarVisitas(db, usuarioId);
+    const pendientes = new Set(locales.filter((visita) => !visita.sincronizada).map((visita) => visita.id));
+    for (const visita of remotas) {
+      // No sobrescribir cambios locales pendientes.
+      if (visita.usuarioId === usuarioId && !pendientes.has(visita.id)) await guardarVisita(db, visita);
+    }
+  })();
+  sincronizaciones.set(usuarioId, tarea);
+  try {
+    await tarea;
+  } finally {
+    if (sincronizaciones.get(usuarioId) === tarea) sincronizaciones.delete(usuarioId);
+  }
 }

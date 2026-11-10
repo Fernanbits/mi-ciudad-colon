@@ -14,14 +14,19 @@ async function guardarSesion(usuario: Usuario, token: string): Promise<void> {
   await SecureStore.setItemAsync(CLAVE_USUARIO, JSON.stringify(usuario));
 }
 
-export async function iniciarSesion(email: string, password: string): Promise<Usuario> {
+function validarCredenciales(email: string, password: string): void {
   if (!email.trim() || !email.includes('@')) throw new Error('Ingresá un email válido.');
   if (!password.trim()) throw new Error('Ingresá tu contraseña.');
   if (password.length < MINIMO_CONTRASENA) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+}
+
+export async function iniciarSesion(email: string, password: string): Promise<Usuario> {
+  validarCredenciales(email, password);
   if (apiConfigurada()) {
     const respuesta = await pedirApi<RespuestaUnoApi<SesionApi>>('/auth/ingreso', {
       method: 'POST',
       body: { email: email.trim(), contrasena: password },
+      timeoutMs: 30000,
     });
     await guardarSesion(respuesta.datos.usuario, respuesta.datos.token);
     return respuesta.datos.usuario;
@@ -33,10 +38,12 @@ export async function iniciarSesion(email: string, password: string): Promise<Us
 
 export async function registrarUsuario(nombre: string, email: string, password: string): Promise<Usuario> {
   if (!nombre.trim()) throw new Error('Ingresá tu nombre.');
+  validarCredenciales(email, password);
   if (apiConfigurada()) {
     const respuesta = await pedirApi<RespuestaUnoApi<SesionApi>>('/auth/registro', {
       method: 'POST',
       body: { nombre: nombre.trim(), email: email.trim(), contrasena: password },
+      timeoutMs: 30000,
     });
     await guardarSesion(respuesta.datos.usuario, respuesta.datos.token);
     return respuesta.datos.usuario;
@@ -54,6 +61,10 @@ export async function recuperarSesion(): Promise<Usuario | null> {
   const token = await SecureStore.getItemAsync(CLAVE_TOKEN);
   const usuario = await SecureStore.getItemAsync(CLAVE_USUARIO);
   if (!token || !usuario) return null;
+  if (apiConfigurada() && token.startsWith('local-session-')) {
+    await cerrarSesion();
+    return null;
+  }
   const datos = parsearObjetoJsonSeguro<Usuario>(usuario);
   if (!datos || typeof datos.id !== 'string' || typeof datos.email !== 'string') {
     await cerrarSesion();

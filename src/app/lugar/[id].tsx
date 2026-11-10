@@ -3,8 +3,8 @@ import * as Speech from 'expo-speech';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { guardarAudioguia } from '../../servicios/archivos';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { buscarAudioguiaGuardada, guardarAudioguia } from '../../servicios/archivos';
 import { listarCategorias, obtenerLugar } from '../../servicios/lugares';
 import { LugarImagen } from '../../components/LugarCard';
 import { Categoria, Lugar } from '../../tipos/modelos';
@@ -52,7 +52,7 @@ export default function LugarDetailScreen() {
     <Text style={[styles.description, { color: colores.textoSuave }]}>{lugar.descripcion}</Text>
     <View style={[styles.info, { backgroundColor: colores.superficie, borderColor: colores.borde }]}><Text style={[styles.infoText, { color: colores.texto }]}>📍 {lugar.direccion}</Text><Text style={[styles.infoText, { color: colores.texto }]}>🎟️ {lugar.precioEntrada === 0 ? 'Entrada gratuita' : lugar.precioEntrada == null ? 'Precio a confirmar' : `$${lugar.precioEntrada.toLocaleString('es-AR')}`}</Text>{lugar.telefono && <Text style={[styles.infoText, { color: colores.texto }]}>☎️ {lugar.telefono}</Text>}{lugar.sitioWeb && <Text style={[styles.infoText, { color: colores.texto }]}>🌐 Sitio web disponible</Text>}</View>
     <View style={[styles.schedule, { backgroundColor: colores.superficie, borderColor: colores.borde }]}><Text style={[styles.scheduleTitle, { color: colores.texto }]}>Horarios informados</Text>{lugar.horarios.length ? lugar.horarios.map((horario, indice) => <Text key={`${horario.dia}-${horario.abre}-${horario.cierra}-${indice}`} style={[styles.scheduleRow, { color: colores.textoSuave }]}>{dias[horario.dia]} · {horario.abre} a {horario.cierra}</Text>) : <Text style={[styles.scheduleRow, { color: colores.textoSuave }]}>Consultar antes de ir</Text>}</View>
-    {lugar.audioguia && <AudioControl url={lugar.audioguia.url} lugarId={lugar.id} duracion={lugar.audioguia.duracionSegundos} texto={lugar.descripcion} />}
+    {lugar.audioguia && <AudioControl key={lugar.id} url={lugar.audioguia.url} lugarId={lugar.id} duracion={lugar.audioguia.duracionSegundos} texto={lugar.descripcion} />}
     {!lugar.audioguia && <SpeechControl texto={lugar.descripcion} remotoDisponible={false} />}
     {lugar.telefono && <Pressable accessibilityRole="button" style={[styles.secondaryButton, { borderColor: colores.principal }]} onPress={() => Linking.openURL(`tel:${lugar.telefono}`)}><Text style={[styles.secondaryText, { color: colores.principal }]}>Llamar al lugar</Text></Pressable>}
     <Pressable accessibilityRole="button" style={[styles.secondaryButton, { borderColor: colores.principal }]} onPress={() => Linking.openURL(mapsUrl)}><Text style={[styles.secondaryText, { color: colores.principal }]}>Cómo llegar</Text></Pressable>
@@ -80,8 +80,9 @@ function AudioControl({ url, lugarId, duracion, texto }: { url: string; lugarId:
   const { colores } = useTema();
   const { estadoVoz } = useVozNarradora();
   const esUrlDePrueba = url.startsWith('demo://');
-  const [source, setSource] = useState(url);
-  const [descargada, setDescargada] = useState(false);
+  const [source, setSource] = useState(() => esUrlDePrueba ? url : buscarAudioguiaGuardada(url, lugarId) ?? url);
+  const [descargada, setDescargada] = useState(() => !esUrlDePrueba && source !== url);
+  const [descargando, setDescargando] = useState(false);
   const [usarVozLocal, setUsarVozLocal] = useState(esUrlDePrueba);
   const [hablando, setHablando] = useState(false);
   const [pausada, setPausada] = useState(false);
@@ -90,24 +91,34 @@ function AudioControl({ url, lugarId, duracion, texto }: { url: string; lugarId:
   useEffect(() => { void setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true }); }, []);
   useEffect(() => {
     if (esUrlDePrueba || status.isLoaded) return;
-    const temporizador = setTimeout(() => setUsarVozLocal(true), 1800);
+    const temporizador = setTimeout(() => setUsarVozLocal(true), 10000);
     return () => clearTimeout(temporizador);
   }, [esUrlDePrueba, status.isLoaded]);
+  useEffect(() => {
+    if (status.isLoaded && !hablando) setUsarVozLocal(false);
+  }, [status.isLoaded, hablando]);
   const total = status.duration || duracion;
   const actual = Math.floor(status.currentTime);
   const restante = Math.max(0, Math.floor(total - actual));
   const descargar = async () => {
-    if (usarVozLocal || esUrlDePrueba) {
+    if (descargando) return;
+    if (esUrlDePrueba) {
       Alert.alert('Audioguía lista para usar', 'La narración se genera con la voz del teléfono y no necesita descargarse.');
       return;
     }
     try {
+      setDescargando(true);
       const local = await guardarAudioguia(url, lugarId);
+      await Speech.stop();
+      setHablando(false);
       setSource(local);
       setDescargada(true);
+      setUsarVozLocal(false);
       Alert.alert('Audioguía guardada', 'Podés escucharla aunque después no tengas señal.');
     } catch {
       Alert.alert('No se pudo guardar', 'Podés reproducirla mientras tengas conexión.');
+    } finally {
+      setDescargando(false);
     }
   };
   const hablar = () => {
@@ -122,6 +133,12 @@ function AudioControl({ url, lugarId, duracion, texto }: { url: string; lugarId:
   const alternarVoz = async () => {
     if (!hablando) {
       hablar();
+      return;
+    }
+    if (Platform.OS === 'android') {
+      await Speech.stop();
+      setHablando(false);
+      setPausada(false);
       return;
     }
     try {
@@ -156,10 +173,11 @@ function AudioControl({ url, lugarId, duracion, texto }: { url: string; lugarId:
     if (status.didJustFinish || actual >= total) void player.seekTo(0);
     player.play();
   };
-  const meta = usarVozLocal
+  const meta = !usarVozLocal && !status.isLoaded ? 'Cargando archivo de audio...'
+    : usarVozLocal
     ? `${descripcionEstadoVoz(estadoVoz)} · ${hablando ? pausada ? 'Pausada' : 'Reproduciendo' : 'Lista para escuchar'}`
     : `${Math.floor(actual / 60)}:${String(actual % 60).padStart(2, '0')} / ${Math.floor(total / 60)}:${String(Math.floor(total % 60)).padStart(2, '0')} · faltan ${Math.floor(restante / 60)}:${String(restante % 60).padStart(2, '0')}`;
-  return <View style={[styles.audio, { backgroundColor: colores.superficieSuave }]}><View style={styles.audioCopy}><Text style={[styles.audioLabel, { color: colores.verde }]}>AUDIOGUÍA</Text><Text style={[styles.audioTitle, { color: colores.texto }]}>Escuchar la historia del lugar</Text><Text style={[styles.audioMeta, { color: colores.verde }]}>{meta}</Text><View style={styles.audioTools}>{usarVozLocal ? <Pressable accessibilityRole="button" accessibilityLabel="Detener narración" onPress={() => void detenerVoz()}><Text style={[styles.audioLink, { color: colores.verde }]}>Detener</Text></Pressable> : <><Pressable accessibilityRole="button" accessibilityLabel="Retroceder 15 segundos" onPress={() => void player.seekTo(Math.max(0, actual - 15))}><Text style={[styles.audioLink, { color: colores.verde }]}>-15 s</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Avanzar 30 segundos" onPress={() => void player.seekTo(Math.min(total, actual + 30))}><Text style={[styles.audioLink, { color: colores.verde }]}>+30 s</Text></Pressable></>}<Pressable accessibilityRole="button" accessibilityLabel={descargada ? 'Audioguía guardada sin conexión' : 'Guardar audioguía'} onPress={() => void descargar()}><Text style={[styles.audioLink, { color: colores.verde }]}>{descargada ? '✓ Sin señal' : 'Guardar'}</Text></Pressable></View></View><Pressable accessibilityRole="button" accessibilityLabel={hablando && !pausada ? 'Pausar audioguía' : 'Reproducir audioguía'} style={[styles.audioButton, { backgroundColor: colores.verde }]} onPress={usarVozLocal ? () => void alternarVoz() : alternarReproduccion}><Text style={styles.audioButtonText}>{usarVozLocal ? hablando && !pausada ? '❚❚' : '▶' : status.playing ? '❚❚' : '▶'}</Text></Pressable></View>;
+  return <View style={[styles.audio, { backgroundColor: colores.superficieSuave }]}><View style={styles.audioCopy}><Text style={[styles.audioLabel, { color: colores.verde }]}>AUDIOGUÍA</Text><Text style={[styles.audioTitle, { color: colores.texto }]}>Escuchar la historia del lugar</Text><Text style={[styles.audioMeta, { color: colores.verde }]}>{meta}</Text><View style={styles.audioTools}>{usarVozLocal ? <Pressable accessibilityRole="button" accessibilityLabel="Detener narración" onPress={() => void detenerVoz()}><Text style={[styles.audioLink, { color: colores.verde }]}>Detener</Text></Pressable> : <><Pressable accessibilityRole="button" accessibilityLabel="Retroceder 15 segundos" onPress={() => void player.seekTo(Math.max(0, actual - 15))}><Text style={[styles.audioLink, { color: colores.verde }]}>-15 s</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Avanzar 30 segundos" onPress={() => void player.seekTo(Math.min(total, actual + 30))}><Text style={[styles.audioLink, { color: colores.verde }]}>+30 s</Text></Pressable></>}<Pressable accessibilityRole="button" disabled={descargando} accessibilityState={{ disabled: descargando, busy: descargando }} accessibilityLabel={descargada ? 'Audioguía guardada sin conexión' : 'Guardar audioguía'} onPress={() => void descargar()}><Text style={[styles.audioLink, { color: colores.verde }]}>{descargando ? 'Guardando...' : descargada ? '✓ Sin señal' : 'Guardar'}</Text></Pressable></View></View><Pressable accessibilityRole="button" disabled={!esUrlDePrueba && !usarVozLocal && !status.isLoaded} accessibilityState={{ disabled: !esUrlDePrueba && !usarVozLocal && !status.isLoaded, busy: !esUrlDePrueba && !usarVozLocal && !status.isLoaded }} accessibilityLabel={!esUrlDePrueba && !usarVozLocal && !status.isLoaded ? 'Cargando audioguía' : usarVozLocal ? hablando && !pausada ? Platform.OS === 'android' ? 'Detener narración' : 'Pausar narración' : 'Escuchar narración' : status.playing ? 'Pausar audioguía' : 'Reproducir audioguía'} style={[styles.audioButton, { backgroundColor: colores.verde }]} onPress={usarVozLocal ? () => void alternarVoz() : alternarReproduccion}><Text style={styles.audioButtonText}>{usarVozLocal ? hablando && !pausada ? Platform.OS === 'android' ? '■' : '❚❚' : '▶' : status.playing ? '❚❚' : '▶'}</Text></Pressable></View>;
 }
 
 function SpeechControl({ texto, remotoDisponible }: { texto: string; remotoDisponible: boolean }) {

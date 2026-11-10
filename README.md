@@ -14,7 +14,7 @@ La app permite explorar lugares, consultar eventos, armar un recorrido personal,
 
 - Gustavo Minchiotti
 - Francisco López
-- Alicia Montenegro
+- Alicia Montenegro (Viviana)
 - Jimena Fernández
 
 ## Documentación
@@ -56,7 +56,9 @@ src/
 
 ## Datos y API
 
-Cuando existe `EXPO_PUBLIC_API_URL` en un archivo `.env`, la app consulta la API de Mi Ciudad para lugares, categorías, eventos, autenticación y visitas. El catálogo se guarda en caché local y las visitas pendientes se conservan en SQLite para intentar sincronizarlas más adelante.
+Cuando existe `EXPO_PUBLIC_API_URL`, la app consulta la API de Mi Ciudad para lugares, categorías, eventos, autenticación, favoritos y visitas. La APK de demostración usa una API HTTPS en Cloud Run, con PostgreSQL y archivos en Supabase; el teléfono puede acceder desde otra red.
+
+El catálogo se guarda en caché local. Las visitas pendientes se conservan en SQLite y los favoritos mantienen una cola por cuenta, tanto para agregar como para quitar lugares. Se reintenta al recuperar conexión o volver a la app. En **Yo → Sincronizar cuenta** se puede pedir un nuevo intento y consultar si quedan cambios pendientes. Los datos guardados sin sesión permanecen en el perfil anónimo del teléfono.
 
 Si no se configura la API o el servidor no responde, se utiliza el catálogo local de respaldo. Esta decisión permite presentar el recorrido principal sin que una caída de red deje la app completamente vacía.
 
@@ -104,4 +106,8 @@ npx expo-doctor
 npx expo export --platform android
 ```
 
-El proyecto todavía se considera una entrega académica. Antes de una publicación real habría que completar pruebas automatizadas, una validación manual con TalkBack, la configuración de credenciales para notificaciones remotas y una estrategia de despliegue.
+El proyecto se considera una entrega académica. Antes de una publicación real falta completar la validación en distintos teléfonos y en iOS, probar TalkBack y comprobar el envío push remoto de punta a punta. Recibir un recordatorio programado en el teléfono acredita una notificación local.
+
+La versión 1.0.2 incluye ajustes de áreas seguras para las barras de Android. En el Pova 6 se instaló sobre la versión anterior, se comprobaron los márgenes y se guardó la audioguía de Molino Forclaz: permaneció disponible tras cerrar y abrir la APK y se reprodujo en modo avión. El registro con la API pública se comprobó en la versión 1.0.1; todavía falta validar la recuperación de datos entre dos teléfonos. La lectura de la descripción depende de las voces instaladas en el dispositivo y se distingue de una audioguía descargada como archivo.
+
+La API de demostración ofrece ocho narraciones MP3 de las descripciones, sintetizadas en español de EE. UU. y almacenadas en Supabase. La app reproduce y descarga esos archivos con `expo-audio`; no necesita credenciales de Text-to-Speech. Los demás lugares conservan la lectura con la voz del teléfono.

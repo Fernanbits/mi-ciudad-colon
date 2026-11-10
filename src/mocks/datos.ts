@@ -21,14 +21,7 @@ const horariosCentro = [
   { dia: 6 as const, abre: '10:00', cierra: '20:00' },
 ];
 
-/**
- * Fotografías reales para la demo académica.
- *
- * La API de referencia trae imágenes sintéticas generadas por código para sus
- * semillas. Las reemplazamos por imágenes públicas de los lugares, manteniendo
- * los mismos registros del catálogo local y dejando los créditos en
- * assets/IMAGENES_FUENTES.md.
- */
+// Fuentes y condiciones de uso: assets/IMAGENES_FUENTES.md.
 const imagenesReales = {
   molinoForclaz: ['https://www.argentina.gob.ar/sites/default/files/molinoforclazcnm.jpg'],
   termasColon: ['https://www.turismoentrerios.com/colon/img/termas-colon/18.jpg'],

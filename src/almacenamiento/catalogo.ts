@@ -2,9 +2,7 @@ import kvStore from 'expo-sqlite/kv-store';
 import { Categoria, Lugar } from '../tipos/modelos';
 import { parsearListaJsonSeguro } from './seguro';
 
-// Se cambia la clave al incorporar fotografías reales para no servir una versión
-// vieja del catálogo que haya quedado guardada en el dispositivo.
-// La clave anterior no se borra: favoritos, visitas y otros datos siguen intactos.
+// Invalidar el catálogo anterior sin tocar favoritos ni visitas.
 const CLAVE_LUGARES = 'mi-ciudad.catalogo.lugares.fotos-reales-v1';
 const CLAVE_CATEGORIAS = 'mi-ciudad.catalogo.categorias';
 

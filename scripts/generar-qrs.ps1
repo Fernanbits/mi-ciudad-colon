@@ -25,8 +25,7 @@ foreach ($item in $items) {
   Write-Host ("Generado: " + $destino + " -> " + $item.Codigo)
 }
 
-# La plancha queda autocontenida para que funcione aunque se abra desde
-# GitHub, una descarga individual o una carpeta distinta a la del proyecto.
+# Incluir las imágenes en el HTML para no depender de archivos externos.
 $cards = foreach ($item in $items) {
   $path = Join-Path $OutputDirectory $item.Archivo
   $base64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($path))

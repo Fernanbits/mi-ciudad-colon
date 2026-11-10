@@ -7,8 +7,7 @@ const CLAVE_ACTUALIZACION_INICIAL = '2000-01-01T00:00:00-03:00';
 let catalogoEnMemoria: Lugar[] | null = null;
 let categoriasEnMemoria: Categoria[] | null = null;
 
-// Son archivos ilustrativos que la API usa para poblar el catálogo de desarrollo.
-// No los mostramos como si fueran fotografías reales de Colón.
+// Excluir las imágenes de prueba del catálogo remoto.
 const MEDIOS_DE_PRUEBA = new Set([
   'beaches-1.png',
   'beaches-2.png',
@@ -49,8 +48,7 @@ function conservarImagenesCuradas(catalogoRemoto: Lugar[]): Lugar[] {
   imagenesLocales.set('lug-018', ['https://termasvillaelisa.com/wp-content/uploads/2023/07/termas-villa-elisa-1.jpg']);
   return catalogoRemoto.map((lugar) => ({
     ...lugar,
-    // Las imágenes seleccionadas para la entrega tienen prioridad. Para los lugares nuevos,
-    // descartamos los PNG ilustrativos del seed hasta contar con una fotografía verificada.
+    // Priorizar las fotografías verificadas.
     imagenes: imagenesLocales.get(lugar.id)?.length
       ? imagenesLocales.get(lugar.id)!
       : lugar.imagenes.filter((url) => !esMedioDePrueba(url)),
@@ -76,7 +74,7 @@ async function catalogoDisponible(): Promise<Lugar[]> {
     try {
       return await cargarCatalogoRemoto();
     } catch {
-      // La copia local mantiene la app usable si la API está apagada o el teléfono está offline.
+      // Conservar el catálogo local si falla la API.
     }
   }
   const cache = await leerCatalogoLocal();
@@ -109,7 +107,6 @@ export async function obtenerLugar(id: string): Promise<Lugar | null> {
       const respuesta = await pedirApi<RespuestaUnoApi<Lugar>>(`/lugares/${encodeURIComponent(id)}`);
       return conservarImagenesCuradas([respuesta.datos])[0] ?? null;
     } catch {
-      // Continúa con la copia local para permitir navegación offline.
     }
   }
   return (await catalogoDisponible()).find((lugar) => lugar.id === id && lugar.activo) ?? null;
@@ -125,7 +122,6 @@ export async function listarCategorias(): Promise<Categoria[]> {
       await guardarCategoriasLocal(respuesta.datos);
       return respuesta.datos;
     } catch {
-      // Usa la última copia conocida.
     }
   }
   const cache = await leerCategoriasLocal();
@@ -144,7 +140,7 @@ export async function obtenerLugarPorQr(codigo: string): Promise<Lugar | null> {
       const respuesta = await pedirApi<RespuestaUnoApi<Lugar>>(`/lugares/qr/${encodeURIComponent(codigo)}`);
       return conservarImagenesCuradas([respuesta.datos])[0] ?? null;
     } catch {
-      // El catálogo local también permite validar QR durante una demo sin red.
+      // Permitir la validación local de QR sin conexión.
     }
   }
   return (await catalogoDisponible()).find((lugar) => lugar.codigoQr === codigo && lugar.activo) ?? null;

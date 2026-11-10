@@ -13,7 +13,7 @@ async function cargarEventosDisponibles(): Promise<Evento[]> {
       eventosEnMemoria = respuesta.datos;
       return respuesta.datos;
     } catch {
-      // La agenda local sigue disponible si el servidor no responde.
+      // Conservar la agenda local si falla la API.
     }
   }
   eventosEnMemoria = eventos;
@@ -31,7 +31,6 @@ export async function obtenerEvento(id: string): Promise<Evento | null> {
       const respuesta = await pedirApi<RespuestaUnoApi<Evento>>(`/eventos/${encodeURIComponent(id)}`);
       return respuesta.datos;
     } catch {
-      // Continúa con los datos locales.
     }
   }
   return (await cargarEventosDisponibles()).find((evento) => evento.id === id) ?? null;

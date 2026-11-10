@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mi Ciudad",
     "slug": "mi-ciudad-colon",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "platforms": [
       "android",
@@ -81,6 +81,7 @@
       }
     },
     "android": {
+      "versionCode": 3,
       "package": "com.miciudad.colon",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
