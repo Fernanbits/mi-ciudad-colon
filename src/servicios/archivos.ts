@@ -1,5 +1,5 @@
 import { Directory, File, Paths } from 'expo-file-system';
-import { ApiHttpError, apiConfigurada, urlApi } from './api';
+import { ApiHttpError, RespuestaUnoApi, apiConfigurada, pedirApi } from './api';
 import { generarId } from '../utilidades/ids';
 
 export async function guardarFotoVisita(uri: string, visitaId: string): Promise<string> {
@@ -54,27 +54,13 @@ export async function subirFotoVisita(uri: string, visitaId: string, token: stri
     type: 'image/jpeg',
   } as unknown as Blob);
 
-  const respuesta = await fetch(urlApi('/archivos'), {
+  const respuesta = await pedirApi<RespuestaUnoApi<{ url: string }>>('/archivos', {
     method: 'POST',
-    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    token,
     body: formulario,
+    timeoutMs: 30000,
   });
-  const texto = await respuesta.text();
-  let contenido: unknown = null;
-  try {
-    contenido = texto ? JSON.parse(texto) : null;
-  } catch {
-    contenido = null;
-  }
-  if (!respuesta.ok) {
-    const error = contenido as { error?: { mensaje?: string; codigo?: string } } | null;
-    throw new ApiHttpError(
-      error?.error?.mensaje ?? `La API respondió con estado ${respuesta.status}.`,
-      respuesta.status,
-      error?.error?.codigo,
-    );
-  }
-  const url = (contenido as { datos?: { url?: string } } | null)?.datos?.url;
-  if (!url) throw new ApiHttpError('La API no devolvió la URL de la foto.', respuesta.status, 'ARCHIVO_SIN_URL');
+  const url = respuesta.datos?.url;
+  if (!url) throw new ApiHttpError('La API no devolvió la URL de la foto.', 502, 'ARCHIVO_SIN_URL');
   return url;
 }

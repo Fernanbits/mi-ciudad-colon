@@ -4,7 +4,7 @@
   <img src="assets/icon-mi-ciudad.png" alt="Ícono de Mi Ciudad Colón" width="160">
 </p>
 
-**Versión:** 1.0.2<br>
+**Versión:** 1.0.3<br>
 **Tipo:** MVP académico para dispositivos móviles  
 **Ciudad:** Colón, Entre Ríos, Argentina  
 **Tecnología principal:** React Native con Expo y TypeScript
@@ -93,7 +93,7 @@ Las tarjetas pendientes conservan la imagen del destino, con menor intensidad vi
 | Navegación | Expo Router | Organiza las pantallas a partir de rutas y carpetas. |
 | Lenguaje | TypeScript | Ayuda a detectar errores en los modelos y servicios. |
 | Persistencia | SQLite y `expo-sqlite/kv-store` | Permite conservar visitas, caché y preferencias en el teléfono. |
-| API | HTTP/JSON con `fetch` | Mantiene la integración simple y compatible con la API provista. |
+| API | Axios sobre HTTP/JSON | Centraliza URL, token, timeout, errores y carga de archivos en un cliente reutilizable. |
 | Voz y audio | `expo-speech` y `expo-audio` | Reproduce un archivo remoto cuando está disponible y usa la voz instalada en el teléfono como respaldo audible. |
 | Diseño | Manrope, colores de marca y componentes propios | Busca una identidad turística moderna y consistente. |
 
@@ -192,11 +192,13 @@ La plancha no reemplaza los códigos que debería colocar cada atractivo en una 
 
 La URL se obtiene desde `EXPO_PUBLIC_API_URL`. La capa `src/servicios/api.ts` centraliza:
 
-- construcción de URLs;
+- instancia Axios con la URL base;
 - encabezado `Authorization: Bearer` cuando hay sesión;
-- serialización JSON;
+- envío de JSON y fotografías mediante `FormData`;
 - timeout general de ocho segundos y treinta segundos para ingreso y registro, para contemplar el arranque de la API;
 - conversión de respuestas no exitosas a `ApiHttpError`.
+
+La primera integración se había realizado con `fetch`. Se migró a Axios para cumplir el requerimiento de la materia. Como los servicios ya dependían de `pedirApi()` y no de una biblioteca concreta, la migración se resolvió dentro de esa capa sin modificar las pantallas ni duplicar configuración.
 
 La app intenta usar datos remotos cuando la API está configurada. Si esa consulta falla, los servicios pueden recuperar el catálogo local de respaldo. La visita tiene un tratamiento diferente: primero se guarda en el teléfono y luego se intenta sincronizar con `POST /yo/visitas`.
 
@@ -272,6 +274,8 @@ En el cierre se ejecutaron 19 casos automatizados sobre los servicios reales del
 
 La APK 1.0.2 se instaló sobre la anterior en un Pova 6 sin borrar datos. Se verificaron la firma, el paquete y la URL pública incluida. En el equipo se comprobó que los títulos y las pestañas respetan las barras de Android. La audioguía descargada de Molino Forclaz conservó el estado «Sin señal» tras cerrar y abrir la app; con modo avión activo, el reproductor avanzó usando el archivo local. La reproducción audible del MP3 ya se había confirmado en la versión 1.0.1. Al terminar la prueba se restauraron Wi-Fi y datos móviles. Aún falta comprobar la sincronización de una cuenta entre dos teléfonos, los tamaños de texto ampliados y TalkBack.
 
+La APK 1.0.3 se instaló como actualización manteniendo el mismo certificado. Android reconoció la versión 1.0.3 y el código 4. Desde la APK independiente se creó una cuenta temporal, se confirmó el perfil en la API pública y se comprobó la sesión en la pantalla **Yo**. Luego se cerró la sesión y se eliminaron del servidor las credenciales de prueba. No se registraron cierres ni errores graves durante este recorrido.
+
 ## 11. Limitaciones conocidas
 
 - La API puede no tener información completa para todos los campos del PDR.
@@ -290,7 +294,7 @@ La APK 1.0.2 se instaló sobre la anterior en un Pova 6 sin borrar datos. Se ver
 3. Probar en Android la carga multipart de fotografías y los límites de tamaño definidos por la API.
 4. Revisar editorialmente las narraciones y probar su descarga en los teléfonos. Los lugares sin MP3 conservan la lectura de la descripción con la voz configurada en el dispositivo.
 5. Probar la accesibilidad con TalkBack, tamaño de fuente ampliado y contraste del modo oscuro.
-6. Instalar y validar la nueva APK 1.0.2 en los teléfonos del equipo antes de grabar.
+6. Repetir la validación de la APK 1.0.3 en los demás teléfonos del equipo antes de grabar.
 7. Reemplazar datos de respaldo por un catálogo administrable cuando exista un backend estable.
 
 ## 13. Criterio de cierre del MVP
